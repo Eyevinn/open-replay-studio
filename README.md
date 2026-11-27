@@ -32,7 +32,12 @@ cp .env.example .env   # optional
 pnpm dev               # http://localhost:5174
 pnpm typecheck
 pnpm build
+pnpm test              # Vitest, jsdom and Testing Library
 ```
+
+The gate for a change is `pnpm typecheck && pnpm build && pnpm test`, which CI runs on every pull request
+(`.github/workflows/ci.yml`). Tests sit next to the code. Layout and pixel criteria are checked by a person, not by
+the pull request (`CLAUDE.md`).
 
 ## Latency
 
