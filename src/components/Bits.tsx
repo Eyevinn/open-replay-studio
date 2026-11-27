@@ -37,3 +37,11 @@ export function RecordedState({ stream, now }: { stream: Stream; now: number }) 
     </span>
   )
 }
+
+/** Says when the library could not be read or a change was not saved, and what was moved from this browser. */
+export function LibraryNotice({ library }: { library: { status: 'loading' | 'ok' | 'error'; error: string; notice: string } }) {
+  if (library.error) return <p className="error" role="alert">{library.error}</p>
+  if (library.notice) return <p className="notice" role="status">{library.notice}</p>
+  if (library.status === 'loading') return <p className="muted" role="status">Loading the library…</p>
+  return null
+}

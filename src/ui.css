@@ -185,3 +185,39 @@ b.sync-ok, b.sync-warn, b.sync-bad { border:0; }
 .timecode-lead { display:flex; align-items:center; gap:12px; align-self:center; padding-right:14px; border-right:1px solid var(--line); }
 .timecode-lead h2 { margin:0; font-size:16px; font-weight:600; }
 @media (max-width: 700px) { .timecode { flex-wrap:wrap; } .timecode-lead { border-right:0; } }
+
+/* The v3 replay controls: several rows in the one box. */
+.ctl-box { align-items:stretch; }
+.ctl-rows { flex:1; min-width:0; display:flex; flex-direction:column; gap:8px; }
+.ctl-row { display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+.ctl-group { display:inline-flex; gap:4px; align-items:center; flex-wrap:wrap; }
+.ctl-scrub .scrub { flex:1; min-width:160px; }
+.ctl-status { color:var(--muted); }
+.ctl-label { width:110px; }
+.ctl-margin { width:76px; }
+.ctl-events { list-style:none; margin:0; padding:6px 8px; border:1px solid var(--line); border-radius:6px; display:flex; flex-direction:column; gap:2px; max-height:140px; overflow:auto; }
+button.on { border-color:var(--accent); color:var(--accent); }
+button.primary.on { box-shadow:0 0 0 2px rgba(45, 212, 191, .35); }
+.chip-warn { color:var(--warn); border-color:var(--warn); }
+.dev-bar { display:flex; gap:10px; align-items:center; margin-bottom:12px; flex-wrap:wrap; }
+.dev-bar input { min-width:260px; }
+.clip-cue { display:inline-flex; align-items:center; gap:6px; flex-wrap:wrap; }
+.small.error { font-size:12px; }
+.replay-body { flex:1; min-height:0; display:flex; gap:12px; }
+.replay-body > main { flex:1; min-width:0; }
+.playlist-panel { width:320px; flex:none; display:flex; flex-direction:column; gap:10px; overflow:auto; background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:12px; }
+.playlist-panel .pp-head { display:flex; align-items:center; justify-content:space-between; }
+.playlist-panel .pp-head h2 { margin:0; font-size:15px; }
+.pp-row { display:flex; gap:6px; align-items:center; }
+.pp-row .grow { min-width:0; }
+.pp-items { list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:4px; }
+.pp-item { display:flex; align-items:center; gap:6px; padding:6px 8px; border:1px solid var(--line); border-radius:8px; }
+.pp-item.now { border-color:var(--accent, #4b8bf5); background:color-mix(in srgb, var(--accent, #4b8bf5) 12%, transparent); }
+.pp-item .num { width:18px; text-align:center; color:var(--muted, #888); font-size:12px; }
+.pp-play { display:flex; flex-direction:column; gap:8px; padding-top:8px; border-top:1px solid var(--line); }
+@media (max-width: 900px) { .replay-body { flex-direction:column; } .playlist-panel { width:auto; max-height:40vh; } }
+/* With the playlist panel open the playhead box is narrower: let it wrap instead of running under the panel. */
+.replay-body .timecode { flex-wrap:wrap; row-gap:4px; }
+.replay-body > main > * { min-width:0; }
+.panel-toggle { display:inline-flex; align-items:center; gap:6px; border:1px solid var(--accent, #4b8bf5); background:transparent; color:var(--accent, #4b8bf5); padding:4px 10px; border-radius:8px; }
+.panel-toggle.on { background:color-mix(in srgb, var(--accent, #4b8bf5) 16%, transparent); }

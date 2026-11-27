@@ -47,6 +47,8 @@ export interface Group {
 
 /** A moment on the timeline. */
 export interface Mark {
+  /** The exact time on the group's axis, nanoseconds as a decimal string. */
+  t: string
   id: string
   groupId: string
   name: string
@@ -56,6 +58,9 @@ export interface Mark {
 
 /** A range on one stream, with a speed. It points into the recording and is never a copy. */
 export interface Clip {
+  /** Exact in and out on the group's axis, nanoseconds as decimal strings. */
+  inT: string
+  outT: string
   id: string
   groupId: string
   name: string
@@ -77,7 +82,11 @@ export interface Playlist {
   id: string
   name: string
   items: PlaylistItem[]
+  /** What happens after the last item: hold the last frame (the default), play the list again, or go live. */
+  endAction?: EndAction
 }
+
+export type EndAction = 'freeze' | 'loop' | 'live'
 
 /** Where a replay's program can go: a named SRT destination, such as a replay slot of an Open Live production. */
 export interface Output {

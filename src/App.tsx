@@ -1,76 +1,72 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { StromController } from './lib/stromController'
 import { useReplayState } from './lib/useReplay'
 import { Desk } from './components/Desk'
 import { Timecode, Transport } from './components/Transport'
-import { replayStatus, setPreview, take, type Mixer, type ReplayStatus } from './lib/replayApi'
+import { ControlsV3, StatusChipsV3, TimecodeV3 } from './components/ReplayControlsV3'
+import { useMixer, type TakeParts } from './lib/useMixer'
+import { useReplayApi, useReplayClient, useReplayView } from './lib/replayV3/useReplayV3'
+import { Icon } from './app/icons'
+import { PlaylistPanel } from './components/PlaylistPanel'
+import { useData } from './state/store'
+import type { ReplayStatus } from './lib/replayApi'
 
 type Running = Extract<ReplayStatus, { running: true }>
 
-/** The operator screen of one running replay: preview, program and sources, and the transport that moves its playhead. */
-export function App({ groupId, status }: { groupId: string; status: Running }) {
-  const controller = useMemo(() => new StromController({ stromUrl: status.stromUrl, group: status.group }), [status.stromUrl, status.group])
-  useEffect(() => () => controller.dispose(), [controller])
-  const { offsetMs, connected } = useReplayState(controller)
-
-  const [mixer, setMixer] = useState<Mixer>(status.mixer)
-  const [busy, setBusy] = useState(false)
-  const [error, setError] = useState('')
-
-  // Someone else (another operator, Strom's own screen) may switch too: read the mixer now and then.
-  useEffect(() => {
-    const id = setInterval(() => {
-      if (busy) return
-      replayStatus(groupId).then((s) => s.running && setMixer(s.mixer), () => {})
-    }, 3000)
-    return () => clearInterval(id)
-  }, [groupId, busy])
-
-  const act = useCallback(
-    async (job: () => Promise<Mixer>) => {
-      setBusy(true)
-      setError('')
+/** A yes/no kept in this browser, for something like whether a panel is open. Works without storage. */
+function useStoredFlag(key: string, initially: boolean): [boolean, (v: boolean) => void] {
+  const [on, setOn] = useState(() => {
+    try {
+      const kept = localStorage.getItem(key)
+      return kept === null ? initially : kept === '1'
+    } catch {
+      return initially
+    }
+  })
+  return [
+    on,
+    (v) => {
+      setOn(v)
       try {
-        setMixer(await job())
-      } catch (e) {
-        setError(e instanceof Error ? e.message : String(e))
-      } finally {
-        setBusy(false)
+        localStorage.setItem(key, v ? '1' : '0')
+      } catch {
+        // Not kept; it still works for now.
       }
     },
-    [],
-  )
-  const onPreview = useCallback((i: number) => void act(() => setPreview(groupId, i)), [act, groupId])
-  const onTake = useCallback(() => void act(() => take(groupId)), [act, groupId])
+  ]
+}
 
-  const sources = status.sources
-  const preview = mixer.preview !== null ? sources[mixer.preview] : undefined
-  const program = mixer.program !== null ? sources[mixer.program] : undefined
-  const canTake = !busy && preview !== undefined && mixer.preview !== mixer.program
+const TakeGroup = ({ m }: { m: TakeParts }) => (
+  <div className="take-group">
+    <div className="on-air">
+      <span className="tag tag-pgm">PGM</span> {m.program?.label ?? 'Black'}
+    </div>
+    <button className="take" disabled={!m.canTake} onClick={m.onTake} title="Send the preview out as program (Enter)">
+      Take{m.preview && m.canTake ? <small>{m.preview.label}</small> : null}
+    </button>
+  </div>
+)
 
-  // Keys 1-9 pick a source for preview, Enter takes it.
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      const el = e.target as HTMLElement | null
-      if (el && (el.tagName === 'INPUT' || el.tagName === 'SELECT' || el.tagName === 'TEXTAREA' || el.tagName === 'BUTTON')) return
-      if (e.metaKey || e.ctrlKey || e.altKey) return
-      if (e.key === 'Enter') {
-        e.preventDefault()
-        if (canTake) onTake()
-      } else if (/^[1-9]$/.test(e.key) && sources[Number(e.key) - 1]) {
-        onPreview(Number(e.key) - 1)
-      }
-    }
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [sources, onPreview, onTake, canTake])
+/** The operator screen of one running replay. It speaks to Strom's replay API in whichever version Strom has. */
+export function App({ groupId, status }: { groupId: string; status: Running }) {
+  const api = useReplayApi(status.stromUrl)
+  if (!api) return <p className="muted">Connecting to the replay…</p>
+  return api.version >= 2 ? <AppV3 groupId={groupId} status={status} /> : <AppV1 groupId={groupId} status={status} />
+}
+
+/** Strom's first replay API: frames and a flat state. Kept working until Strom deploys v3. */
+function AppV1({ groupId, status }: { groupId: string; status: Running }) {
+  const controller = useMemo(() => new StromController({ stromUrl: status.stromUrl, group: status.group, liveMarginMs: status.liveMarginMs }), [status.stromUrl, status.group, status.liveMarginMs])
+  useEffect(() => () => controller.dispose(), [controller])
+  const { offsetMs, connected } = useReplayState(controller)
+  const m = useMixer(groupId, status)
 
   return (
     <div className="app">
       <main>
-        {error && (
+        {m.error && (
           <p className="error" role="alert">
-            {error}
+            {m.error}
           </p>
         )}
         <Timecode
@@ -85,20 +81,62 @@ export function App({ groupId, status }: { groupId: string; status: Running }) {
             </>
           }
         />
-        <Desk status={status} mixer={mixer} busy={busy} onPreview={onPreview} />
+        <Desk status={status} mixer={m.mixer} busy={m.busy} onPreview={m.onPreview} />
       </main>
-      {/* At the bottom of the page and kept in view: where the playhead is moved, and where a source is taken out. */}
       <footer className="controls" aria-label="Replay controls">
         <Transport controller={controller}>
-          <div className="take-group">
-            <div className="on-air">
-              <span className="tag tag-pgm">PGM</span> {program?.label ?? 'Black'}
-            </div>
-            <button className="take" disabled={!canTake} onClick={onTake} title="Send the preview out as program (Enter)">
-              Take{preview && canTake ? <small>{preview.label}</small> : null}
-            </button>
-          </div>
+          <TakeGroup m={m} />
         </Transport>
+      </footer>
+    </div>
+  )
+}
+
+/** Strom's replay API v3: exact times, typed state, events with reasons, and the controls for marks, clips and cues. */
+function AppV3({ groupId, status }: { groupId: string; status: Running }) {
+  const client = useReplayClient({ baseUrl: status.stromUrl, flowId: status.flowId, group: status.group })
+  const m = useMixer(groupId, status)
+  const { groups, playlists } = useData()
+  // A replay whose group this browser does not know (deleted, or made in another browser) still gets its playlists.
+  const group = groups.find((g) => g.id === groupId) ?? { id: groupId, name: 'This replay', members: [], rule: null, createdAt: 0, lastOpenedAt: null }
+  const [panelOpen, setPanelOpen] = useStoredFlag('open-replay-studio.playlist-panel', window.innerWidth >= 1100) // open at first on a screen wide enough to spare the room
+  const [activeId, setActiveId] = useState<string | null>(null)
+  const active = playlists.find((p) => p.id === activeId) ?? playlists[0]
+  // The program source's stream, for a clip cut now: the flow's players are in the order of the group's members.
+  // The replay reports each angle's camera, in the order of the mixer inputs; the group's members are the fallback. A clip player on air is no camera.
+  const view = useReplayView(client)
+  const onAir = m.mixer.program ?? 0
+  const programStreamId = view.angles[onAir]?.sourceId ?? (onAir < status.sources.length ? group.members[onAir]?.streamId : undefined) ?? ''
+
+  return (
+    <div className="app">
+      <div className="replay-body">
+        <main>
+          {m.error && (
+            <p className="error" role="alert">
+              {m.error}
+            </p>
+          )}
+          <TimecodeV3
+            client={client}
+            lead={
+              <>
+                <h2>Replay</h2>
+                <StatusChipsV3 client={client} />
+                <button className={`panel-toggle${panelOpen ? ' on' : ''}`} aria-pressed={panelOpen} onClick={() => setPanelOpen(!panelOpen)} title="Build and play playlists beside the replay">
+                  <Icon name="playlists" size={14} /> Playlists
+                </button>
+              </>
+            }
+          />
+          <Desk status={status} mixer={m.mixer} busy={m.busy} onPreview={m.onPreview} />
+        </main>
+        {panelOpen && <PlaylistPanel group={group} activeId={active?.id ?? null} onActive={setActiveId} onClose={() => setPanelOpen(false)} />}
+      </div>
+      <footer className="controls">
+        <ControlsV3 client={client} groupId={groupId} programStreamId={programStreamId} addTo={active ? { id: active.id, name: active.name } : null}>
+          <TakeGroup m={m} />
+        </ControlsV3>
       </footer>
     </div>
   )

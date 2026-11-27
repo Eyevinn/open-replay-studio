@@ -1,4 +1,4 @@
-import { MockController, WINDOW_MS, type Clock, type ReplayController, type ReplayState } from './controller'
+import { WINDOW_MS, type Clock, type ReplayController, type ReplayState } from './controller'
 import { OffsetTracker } from './offset'
 
 // Controller over a Strom replay group's WebSocket (`/api/replay/{flow}/{group}/ws`).
@@ -8,10 +8,9 @@ import { OffsetTracker } from './offset'
 // subtracted: offset 0 means "at the live position", not "at the very last frame".
 // This stands in for the Open Replay backend until its API exists.
 
-// How far behind the newest known segment `live` parks the cursor. It is a buffer against segments arriving
-// late: with 1 s segments, about 1000 ms was clean in every trial and 500 ms stuttered now and then (see
-// README, "Live margin"). Set OPEN_REPLAY_LIVE_MARGIN_MS to change it.
-const LIVE_MARGIN_MS = Number(import.meta.env.OPEN_REPLAY_LIVE_MARGIN_MS) || 1500
+// How far behind the live edge `live` parks the cursor comes from the Open Replay API (`liveMarginMs` in the playback
+// status), which also uses it when it starts a replay. It is a buffer against segments arriving late: with 1 s segments,
+// about 1000 ms was clean and 500 stuttered; with 500 ms segments, 800 was clean (see README, "Live margin").
 const RECONNECT_MS = 2000
 // Live or replay is decided by what the operator last asked for, not by the measured offset,
 // so measurement noise can't flip it. Strom's state only overrules the mode when it clearly
@@ -37,6 +36,8 @@ export type StromOptions = {
   group: string
   /** Full WebSocket URL; skips finding the flow by group. */
   wsUrl?: string
+  /** How far behind the live edge `live` parks the cursor, in ms. */
+  liveMarginMs: number
 }
 
 export class StromController implements ReplayController {
@@ -44,7 +45,7 @@ export class StromController implements ReplayController {
   private listeners = new Set<(s: ReplayState) => void>()
   private ws: WebSocket | null = null
   private last: StromState | null = null
-  private tracker = new OffsetTracker(LIVE_MARGIN_MS)
+  private tracker: OffsetTracker
   private mode: 'live' | 'replay' = 'live'
   private target = 0 // offset the operator asked for, shown until the command has settled
   private settleUntil = 0
@@ -55,6 +56,7 @@ export class StromController implements ReplayController {
   private greeted = false
 
   constructor(private opts: StromOptions) {
+    this.tracker = new OffsetTracker(opts.liveMarginMs)
     void this.connect()
   }
 
@@ -76,7 +78,7 @@ export class StromController implements ReplayController {
     const offset = Math.min(WINDOW_MS, Math.max(0, Math.round(ms)))
     if (offset === 0) return this.goLive()
     // Seek from the smoothed edge, so the offset shown afterwards is the one asked for.
-    const behindFrames = ((LIVE_MARGIN_MS + offset) * 1e6) / s.frame_ns
+    const behindFrames = ((this.opts.liveMarginMs + offset) * 1e6) / s.frame_ns
     this.send({ cmd: 'seek', frame: Math.round(edge - behindFrames) })
     this.ensurePlaying()
     this.command('replay', offset)
@@ -87,7 +89,7 @@ export class StromController implements ReplayController {
   }
 
   goLive() {
-    this.send({ cmd: 'live', margin_ms: LIVE_MARGIN_MS })
+    this.send({ cmd: 'live', margin_ms: this.opts.liveMarginMs })
     this.command('live', 0)
   }
 
@@ -149,7 +151,7 @@ export class StromController implements ReplayController {
   private retry() {
     this.last = null
     this.clockAnchor = null
-    this.tracker = new OffsetTracker(LIVE_MARGIN_MS)
+    this.tracker = new OffsetTracker(this.opts.liveMarginMs)
     this.greeted = false
     this.publish({ offsetMs: this.state.offsetMs, connected: false })
     if (this.closed) return
@@ -196,18 +198,3 @@ export class StromController implements ReplayController {
 }
 
 type Flow = { id: string; blocks?: Array<{ properties?: Record<string, unknown> }> }
-
-const STROM_URL = import.meta.env.OPEN_REPLAY_STROM_URL as string | undefined
-const GROUP = import.meta.env.OPEN_REPLAY_REPLAY_GROUP as string | undefined
-const WS_URL = import.meta.env.OPEN_REPLAY_REPLAY_WS_URL as string | undefined
-
-let controller: ReplayController | undefined
-
-/** One controller for the whole app (StrictMode would otherwise build two live sockets). */
-export function getController(): ReplayController {
-  controller ??=
-    (STROM_URL && GROUP) || WS_URL
-      ? new StromController({ stromUrl: STROM_URL ?? '', group: GROUP ?? '', wsUrl: WS_URL })
-      : new MockController()
-  return controller
-}

@@ -10,6 +10,7 @@ import { Playlists } from '../screens/Playlists'
 import { Outputs } from '../screens/Outputs'
 import { SettingsScreen } from '../screens/Settings'
 import { Replay } from '../screens/Replay'
+import { DevReplayV3 } from '../screens/DevReplayV3'
 
 const NAV: { path: string; label: string; icon: IconName }[] = [
   { path: 'groups', label: 'Groups', icon: 'groups' },
@@ -29,6 +30,7 @@ function Screen({ route }: { route: string[] }) {
   if (a === 'outputs') return <Outputs />
   if (a === 'settings') return <SettingsScreen />
   if (a === 'replay') return <Replay groupId={b} />
+  if (a === 'dev' && b === 'replay-v3') return <DevReplayV3 />
   return (
     <div className="page">
       <Empty title="That page doesn't exist" action={<a className="btn" href={href('groups')}>Back to groups</a>}>

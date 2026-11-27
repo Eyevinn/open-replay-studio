@@ -77,10 +77,10 @@ export function SettingsScreen() {
 
       <section className="panel">
         <h2>Studio data</h2>
-        <p className="muted">Groups, marks, clips, playlists and outputs are kept in this browser. The recordings are not touched.</p>
+        <p className="muted">Groups and outputs are kept in this browser. Marks, clips and playlists are kept by the Open Replay API. The recordings are not touched.</p>
         {confirmReset ? (
           <span className="confirm">
-            Forget all groups, marks, clips, playlists and outputs?
+            Forget all groups and outputs?
             <button className="danger" onClick={() => { actions.clearStudioData(); setConfirmReset(false) }}>
               Forget them
             </button>

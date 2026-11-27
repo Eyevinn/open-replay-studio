@@ -2,13 +2,14 @@ import { useState } from 'react'
 import { Empty, Page } from '../app/Page'
 import { href } from '../app/router'
 import { Icon } from '../app/icons'
-import { Pill } from '../components/Bits'
+import { ClipCue } from '../components/ClipCue'
+import { LibraryNotice, Pill } from '../components/Bits'
 import { formatClipLength, formatClock, formatSpeed } from '../lib/format'
 import { actions, streamById, useData } from '../state/store'
 
 /** Marks and clips of every group. A clip points into the recording; it is never a copy. */
 export function Library() {
-  const { groups, marks, clips, playlists, settings } = useData()
+  const { groups, marks, clips, playlists, settings, library } = useData()
   const [groupId, setGroupId] = useState('')
   const [tag, setTag] = useState('')
   const [query, setQuery] = useState('')
@@ -22,6 +23,7 @@ export function Library() {
 
   return (
     <Page title="Library" subtitle="Clips and marks. A clip is a range on one stream with a speed.">
+      <LibraryNotice library={library} />
       <div className="filters">
         <label className="field-inline">
           <span className="sr-only">Group</span>
@@ -76,6 +78,7 @@ export function Library() {
                 </div>
               </div>
               {c.tag && <Pill tone="accent">{c.tag}</Pill>}
+              <ClipCue clip={c} group={groups.find((g) => g.id === c.groupId)} />
               <label className="field-inline">
                 <span className="sr-only">Add {c.name} to a playlist</span>
                 <select

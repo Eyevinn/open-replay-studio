@@ -1,5 +1,7 @@
 import { useState } from 'react'
 import { Empty, Page } from '../app/Page'
+import { LibraryNotice } from '../components/Bits'
+import { PlaylistPlayer } from '../components/PlaylistPlayer'
 import { Icon } from '../app/icons'
 import { formatClipLength, formatSpeed } from '../lib/format'
 import { actions, useData } from '../state/store'
@@ -7,7 +9,7 @@ import { SPEEDS } from '../model'
 
 /** Ordered clips, each with its own speed. */
 export function Playlists() {
-  const { playlists, clips } = useData()
+  const { playlists, clips, library, groups } = useData()
   const [selected, setSelected] = useState<string | null>(null)
   const [newName, setNewName] = useState('')
   const [error, setError] = useState('')
@@ -31,6 +33,7 @@ export function Playlists() {
 
   return (
     <Page title="Playlists" subtitle="Clips in the order you want to play them.">
+      <LibraryNotice library={library} />
       <div className="split split-narrow">
         <aside className="side" aria-label="Playlists">
           <h2>Your playlists</h2>
@@ -136,6 +139,7 @@ export function Playlists() {
                   Add
                 </button>
               </div>
+              <PlaylistPlayer key={current.id} playlist={current} groups={groups} />
               <div className="btn-row">
                 {confirmDelete ? (
                   <span className="confirm">

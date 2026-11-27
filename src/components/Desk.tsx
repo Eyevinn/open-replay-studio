@@ -59,7 +59,9 @@ export function Desk({ status, mixer, busy, onPreview }: { status: Running; mixe
   const lead = known.length > 0 ? Math.min(...known) : null
   const behind = (i: number) => (lead !== null && typeof delays[i] === 'number' ? (delays[i] as number) - lead : null)
   const spread = known.length > 1 && lead !== null ? Math.max(...known) - lead : null
-  const preview = mixer.preview !== null ? sources[mixer.preview] : undefined
+  const clips = status.clipPlayers.map((c) => ({ index: c.index, label: c.label }))
+  const preview = mixer.preview !== null ? [...sources, ...clips].find((s) => s.index === mixer.preview) : undefined
+  const program = mixer.program !== null ? clips.find((s) => s.index === mixer.program) : undefined
 
   return (
     <div className="desk-view">
@@ -69,6 +71,12 @@ export function Desk({ status, mixer, busy, onPreview }: { status: Running; mixe
           <WhepVideo url={status.previewUrl} label="Preview" />
           <figcaption>
             <span className="tag tag-pvw">PVW</span> {preview?.label ?? 'Nothing in preview'}
+            {program && (
+              <>
+                {' '}
+                <span className="tag tag-pgm">PGM</span> {program.label}
+              </>
+            )}
           </figcaption>
         </figure>
       </div>
