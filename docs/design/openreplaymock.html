@@ -1,0 +1,970 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Replay Channel (mockup)</title>
+<style>
+/* Working copy of the original replay mockup (layout, wording and colours), made to run on the mockup engine.
+   Starting point for adding features from simple.html. OK'd by Magnus 2026-11-26. */
+:root{
+  --bg:#141414; --panel:#1e1e1e; --panel2:#262626; --line:#333; --line2:#444;
+  --text:#ececec; --dim:#a0a0a0; --faint:#6b6b6b;
+  --teal:#1ec8c8; --tealText:#062a2a; --red:#ef4b4b; --green:#2bd46b; --amber:#ffc531; --lime:#b6e34a;
+  --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{background:var(--bg);color:var(--text);font:14px/1.35 system-ui,-apple-system,"Segoe UI",sans-serif;overflow:hidden}
+button{font:inherit;color:inherit;background:var(--panel2);border:1px solid var(--line2);border-radius:8px;padding:7px 12px;cursor:pointer;white-space:nowrap}
+button:disabled{opacity:.35;cursor:default}
+button:hover{border-color:#666}
+button.teal{background:var(--teal);border-color:var(--teal);color:var(--tealText);font-weight:600}
+button.icon{background:var(--panel2);padding:6px 10px}
+input,select{font:inherit;color:var(--text);background:#151515;border:1px solid var(--line2);border-radius:8px;padding:6px 9px}
+select:not(.plain){-webkit-appearance:none;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23a0a0a0' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 11px center;background-size:13px;padding-right:32px!important;cursor:pointer}   /* own chevron with room on the right (the browser arrow sat on the edge) */
+.mono{font-family:var(--mono)}
+.dim{color:var(--dim)}
+#app{display:grid;grid-template-rows:auto 1fr;height:100%}
+header{display:flex;align-items:center;gap:12px;padding:14px 39px 12px} /* 39 = main's 22 + panel border 1 + panel padding 16: title lines up with the panel titles, pills with the panels' inner right edge */
+header h1{margin:0;font-size:19px;font-weight:700}
+header .ch{color:var(--dim);font-size:14px}
+header .pill{font-size:13px;padding:4px 11px;gap:7px;border-radius:7px} header .pill i{width:7px;height:7px} /* smaller header (Simon, 2026-11-26) */
+header .sp{flex:1}
+header .gear{width:32px;height:30px;padding:0;display:inline-flex;align-items:center;justify-content:center;border-radius:7px;background:#202020;color:var(--dim)} header .gear:hover{color:var(--text)} header .gear .ic{width:17px;height:17px}
+/* settings page (gear in the header): its own page over the whole window, Back returns to the replay view */
+#sets{position:fixed;inset:0;z-index:55;display:none;background:var(--bg);overflow:auto}
+#sets.show{display:block}
+#sets .sbar{position:sticky;top:0;z-index:1;display:flex;align-items:center;gap:14px;padding:14px 39px 12px;background:var(--bg);border-bottom:1px solid var(--line)}
+#sets .sbar h3{margin:0;font-size:19px;font-weight:700} #sets .sbar .sp{flex:1}
+#sets .sbody{display:grid;grid-template-columns:170px minmax(0,1fr);gap:28px;max-width:900px;margin:0 auto;padding:24px 39px 60px}
+#sets nav{position:sticky;top:76px;align-self:start;display:flex;flex-direction:column;gap:2px}
+#sets nav a{padding:7px 10px;border-radius:7px;color:var(--dim);text-decoration:none;font-size:14px;cursor:pointer} #sets nav a:hover{color:var(--text);background:var(--panel)}
+#sets nav a.on{color:var(--text);background:var(--panel2)}
+#sets section{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:6px 20px 8px;margin-bottom:18px;scroll-margin-top:80px}
+#sets h4{margin:12px 0 4px;font-size:15px;font-weight:600}
+#sets .row{display:flex;align-items:center;gap:16px;padding:11px 0;border-top:1px solid var(--line)} #sets h4+.row{border-top:none}
+#sets .row>span:first-child{flex:1;font-size:14px} #sets .row small{display:block;color:var(--dim);font-size:12px;margin-top:3px}
+#sets .seg{flex:none;display:inline-flex;border:1px solid var(--line2);border-radius:8px;overflow:hidden}
+#sets .seg button{border:none;border-radius:0;padding:6px 12px;font-size:13px;background:#151515} #sets .seg button+button{border-left:1px solid var(--line2)}
+#sets .seg button.on{background:var(--teal);color:var(--tealText);font-weight:600}
+#sets input[type=number]{width:76px} #sets .danger{border-color:var(--red);color:var(--red)}
+#sets .keys{display:grid;grid-template-columns:auto 1fr;gap:7px 16px;padding:8px 0 12px;font-size:14px} #sets kbd{font:600 12px/1 var(--mono);padding:4px 7px;border:1px solid var(--line2);border-bottom-width:2px;border-radius:5px;background:#151515;white-space:nowrap;justify-self:start}
+@media (max-width:700px){ #sets .sbody{grid-template-columns:1fr;padding:16px} #sets nav{display:none} #sets .sbar{padding:12px 16px} #sets .row{flex-wrap:wrap} }
+.pill{display:inline-flex;align-items:center;gap:9px;border:1px solid var(--line2);border-radius:9px;padding:7px 16px;font-size:16px;font-weight:600;background:#202020}
+.pill i{width:8px;height:8px;border-radius:50%;background:#fff}
+.pill.ok{background:#14301f;border-color:#1f5a35;color:var(--green)}.pill.ok i{background:var(--green)}
+.pill.air{cursor:pointer}
+.pill.air.on{background:var(--red);border-color:var(--red);color:#fff}
+main{display:grid;grid-template-columns:minmax(0,1.58fr) minmax(0,1fr);grid-template-rows:auto auto 1fr;grid-template-areas:"top pl" "snab pl" "ang ut";gap:12px;padding:0 22px 16px;min-height:0}
+.a-top{grid-area:top;display:grid;grid-template-columns:minmax(0,1fr) 98px;gap:10px}.a-snab{grid-area:snab}.a-ang{grid-area:ang}.a-pl{grid-area:pl;min-height:0;contain:size}   /* the Clips / Playlist box never sets the row heights, so switching tabs doesn't move the page */.a-ut{grid-area:ut}
+.col{display:flex;flex-direction:column;gap:14px;min-height:0}
+.col>.panel{flex:0 0 auto}
+.col>.panel.side{flex:1 1 0;min-height:0}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px 16px}
+.panel h2{margin:0;font-size:18px;font-weight:600}
+.phead{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+.phead .sp{flex:1}
+.toprow{display:grid;grid-template-columns:minmax(0,1fr) 98px;gap:12px}
+
+/* live / program */
+.prog{display:flex;flex-direction:column}
+#state{font-size:13px}
+.viewer{display:flex;position:relative}   /* two islands: meters in their own black box flush left, picture its own box centred in the space to the right */
+.vleft{width:96px;flex:0 0 auto;padding:10px 10px;background:#0c0c0c;border-radius:8px 0 0 8px;   /* joined to the picture: rounded only on the outer left side */
+  display:flex;flex-direction:column;gap:8px}
+.mtr{display:flex;gap:14px;flex:1;min-height:70px;justify-content:flex-start}   /* meters + scale left aligned, like the rows under them */
+.mtr .bars{display:flex;gap:5px}
+.mtr .bars div{display:flex;flex-direction:column;align-items:center;gap:4px}
+.mtr .bars span{font-size:15px;font-weight:600}
+.mtr .bars i{flex:1;width:13px;background:#ffffff18;position:relative;overflow:hidden;border-radius:1px}
+.mtr .bars i b{position:absolute;left:0;right:0;bottom:0;background:linear-gradient(to top,#22c55e 0%,#4ade80 45%,#facc15 80%,#ef4444 100%)}
+.mtr .scale{display:flex;flex-direction:column;justify-content:space-between;font-size:14px;color:#eee;padding:22px 0 2px;text-align:right;min-width:24px}
+.ljud{display:flex;align-items:center;gap:10px;font-size:15px}   /* switch right after the speaker icon, left aligned */
+.vol{display:flex;align-items:center;gap:6px;font-size:12px;color:#ddd;white-space:nowrap}
+#volV{display:none}   /* dB readout hidden (Simon, 2026-11-26); the value shows as a tooltip on the slider */
+.vol input{flex:1;min-width:0;width:auto;padding:0;accent-color:#fff}   /* slider fills the row */
+.sw{position:relative;width:38px;height:22px;border-radius:999px;background:#444;cursor:pointer;border:none;padding:0;flex:0 0 auto}
+.sw::after{content:"";position:absolute;left:3px;top:3px;width:16px;height:16px;border-radius:50%;background:#fff;transition:left .15s}
+.sw.on{background:var(--teal)}.sw.on::after{left:19px}
+.vid{position:relative;flex:0 0 auto;align-self:center;margin:0 auto;border-radius:0;overflow:hidden;   /* square corners on the picture */
+  
+  width:calc(100% - 96px);aspect-ratio:16/9;background:#000}
+.vid canvas{position:absolute;inset:0;width:100%;height:100%}
+.vid .ctx{position:absolute;left:50%;top:14px;transform:translateX(-50%);display:inline-flex;gap:8px;align-items:center;background:#000b;border:1px solid var(--teal);color:#fff;font-size:14px;font-weight:600;padding:4px 6px 4px 12px;border-radius:6px;white-space:nowrap;max-width:70%}
+.vid .ctx span{overflow:hidden;text-overflow:ellipsis}
+.vid .ctx button{background:none;border:none;color:#fff;padding:0 6px;font-size:16px;line-height:1}
+.vid .live{position:absolute;right:14px;top:14px;background:var(--red);color:#fff;font-weight:700;font-size:14px;padding:4px 12px;border-radius:6px;border:1px solid var(--red)}
+.vid .live.behind{background:#000a;border-color:var(--amber);color:var(--amber);font-family:var(--mono)} /* not live: how far behind live, in amber (as in multiview.html) */
+#bar.off .fill{background:var(--amber);opacity:.8} #state.off{color:var(--amber);border-color:#ffc53166}
+.vid .tc{position:absolute;left:18px;bottom:12px;font:600 26px var(--mono);letter-spacing:.02em;text-shadow:0 1px 3px #000,0 0 8px #000a}
+.viewer .angtxt{position:absolute;right:52px;bottom:14px;font-size:15px;text-shadow:0 1px 2px #000}
+.viewer .fs{position:absolute;right:14px;bottom:9px;font-size:20px;color:#fff;background:none;border:none;padding:2px;font-size:16px}
+.vid::after{content:"";position:absolute;inset:0;box-shadow:inset 0 0 0 4px var(--red);opacity:0;transition:opacity .12s;pointer-events:none;z-index:2}
+.vid.air::after{opacity:1}   /* red frame on the picture when the director has the replay on air (drawn above the video) */
+.scrub{display:grid;grid-template-columns:auto 1fr auto auto;gap:18px;align-items:center;margin:14px 0 22px;font-size:15px}
+#bar{position:relative;height:18px;cursor:pointer;touch-action:none}
+#bar::before{content:"";position:absolute;inset:-14px -12px} /* forgiving grab area: about 14 px above and below, 12 px past each end */
+#bar .head{transition:transform .1s}#bar:hover .head,#bar:active .head{transform:scale(1.2)}
+#bar .cb{position:absolute;top:-4px;height:6px;min-width:5px;border-radius:2px;background:#ff8a3d;opacity:.9;cursor:pointer}
+#bar .cb:hover{opacity:1}
+#bar .cb.on{background:#fff;opacity:.9}
+#bar .track{position:absolute;left:0;right:0;top:5px;height:8px;border-radius:3px;background:#3a3a3a}
+#bar .fill{position:absolute;left:0;top:5px;height:8px;border-radius:3px;background:var(--teal)}
+#bar .head{position:absolute;top:0;width:18px;height:18px;margin-left:-9px;box-shadow:0 1px 3px #000;border-radius:50%;background:#eee}
+.mkgrp{display:inline-flex}.mkgrp button{color:var(--amber);border-radius:0;padding-left:11px!important;padding-right:11px!important}
+.mkgrp button:first-child{border-radius:8px 0 0 8px}.mkgrp button:last-child{border-radius:0 8px 8px 0}.mkgrp button+button{border-left:none}
+.mkgrp .ic{width:12px;height:12px;vertical-align:-1px} #mkAdd{font-size:11px}   /* smaller mark diamond */
+#bar .mk{position:absolute;top:-12px;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;cursor:pointer;z-index:2}
+#bar .mk b{font:700 10px/13px var(--mono);min-width:15px;padding:0 3px;text-align:center;border-radius:3px;background:var(--amber);color:#2a2000}
+#bar .mk i{width:2px;height:22px;background:var(--amber)}
+#bar .mk:hover b{background:#fff}
+#bar .io{position:absolute;top:20px;transform:translateX(-50%);font:700 9px/13px system-ui;padding:0 4px;border-radius:3px;pointer-events:none}
+#bar .io::before{content:"";position:absolute;left:50%;top:-16px;width:2px;height:16px;margin-left:-1px;background:inherit}
+#bar .io.drag{pointer-events:auto;cursor:ew-resize;top:18px;font-size:10px;line-height:15px;padding:0 6px}
+#bar .io.in{background:var(--red);color:#fff}#bar .io.out{background:var(--teal);color:var(--tealText)}
+#bar .rng{position:absolute;top:4px;height:11px;background:#1ec8c833;border:1px solid #1ec8c899;border-radius:3px}
+.transport{display:flex;flex-wrap:nowrap;gap:6px;align-items:center;justify-content:flex-start} /* one row, also in small windows (Mark Out used to wrap) */
+.transport .mkgrp{margin-left:auto}   /* playback left; marks, Mark In and Mark Out together on the right */
+.transport button,.transport select{font-size:15px;padding:8px 9px;min-height:40px;flex-shrink:0}
+.transport .play{background:var(--teal);border-color:var(--teal);color:var(--tealText);width:64px}
+#markIn{border-color:var(--red);color:var(--red)}#markIn.set{background:var(--red);color:#fff}
+#markOut{border-color:var(--teal);color:var(--teal);background:#1ec8c814}#markOut.set{background:var(--teal);color:var(--tealText)}
+/* speed */
+.speed{display:flex;flex-direction:column;align-items:center;gap:10px;padding:12px 10px}
+.speed .lbl{font-weight:600;font-size:16px}
+.spbox{flex:1;width:100%;border:2px solid transparent;   /* no lime outline (Simon, 2026-11-26) */
+  border-radius:12px;display:flex;flex-direction:column;align-items:center;padding:10px 0;gap:10px}
+.spbox b{font-size:16px;font-weight:600}
+/* the fader: thin dark slot and a brushed-metal cap, like his */
+#fader{position:relative;flex:1;width:100%;cursor:ns-resize;touch-action:none}
+#fader .slot{position:absolute;left:42%;top:14px;bottom:14px;width:6px;margin-left:-3px;border-radius:3px;background:#3a3a3a;box-shadow:inset 0 1px 2px #000}
+#fader .cap{position:absolute;left:42%;width:42px;height:26px;margin:-13px 0 0 -21px;border-radius:7px;border:1px solid #888;
+  background:linear-gradient(#f4f4f4 0%,#cfcfcf 42%,#a3a3a3 58%,#dcdcdc 100%);box-shadow:0 2px 6px #000b}
+.spbox b#spdV.drag{color:var(--dim)}
+#fader .fil{position:absolute;left:0;right:0;bottom:0;border-radius:3px;background:var(--teal);opacity:.85}
+#fader .fast{position:absolute;left:42%;width:2px;margin-left:-1px;border-radius:1px;background:var(--amber);opacity:.7}   /* fast part above 100: a thin amber line (picked from the fast-forward prototype, version C) */
+#fader .fil.over{background:linear-gradient(to top,var(--teal) 0 75%,var(--amber))}
+#spdV.fastv{color:var(--amber)}
+#fader .tk[data-d="100"] span{color:#aaa}
+#fader .tk{position:absolute;left:42%;margin-left:27px;   /* fader sits a little left of centre so the numbers fit on the right without widening the panel */
+  width:4px;height:2px;background:#666;transform:translateY(-1px)}   /* ticks and labels outside the cap, so 100 stays readable */
+#fader .tk span{position:absolute;left:6px;top:-7px;font-size:9px;color:#777}
+#fader .tk[data-d="200"]{background:var(--amber)} #fader .tk[data-d="200"] span{color:var(--amber)}
+#fader .tk.on{background:var(--teal)}#fader .tk.on span{color:var(--teal)}
+#fader .cap.pulse{animation:pulse .22s ease-out}
+@keyframes pulse{0%{box-shadow:0 0 0 0 #1ec8c8aa,0 2px 6px #000b}100%{box-shadow:0 0 0 9px #1ec8c800,0 2px 6px #000b}}
+.speed .ramp{font-size:12px;color:var(--dim);padding:2px 4px;display:none} /* PARKED: Ramp button hidden (Simon, 2026-11-26); the ramp stays fixed at 0.6 s. Remove display:none to bring it back. */.speed .ramp b{color:var(--text);font-weight:600}
+#fader .cap::after{content:"";position:absolute;left:8px;right:8px;top:12px;height:1px;background:#0005}
+/* quick */
+.qline{display:flex;align-items:center;gap:12px}
+.qline #nName{flex:1;min-width:140px;min-height:40px}
+.qline #qlen{min-height:40px;min-width:84px}
+.qline #nPl{min-height:40px;max-width:200px;color:var(--dim)} .qline #nPl.set{border-color:var(--teal);color:var(--text)}   /* playlist for the next clip */
+#qClear{display:none} /* PARKED: bin that cleared the next clip's name and tags (Simon, 2026-11-26: looked like "delete clip"). Remove this line to bring it back. */
+.qsep{width:1px;align-self:stretch;background:var(--line);margin:0 4px}
+.qline .dim,.qtags .dim{white-space:nowrap}
+.qtags{display:flex;align-items:center;gap:12px;margin-top:12px}
+.qtags .dim{min-width:0}
+.qtags{justify-content:flex-end}
+.qtags .tags{margin-top:0;flex:0 1 auto}
+/* "Tag after" (chosen from the tagging prototype, 2026-11-26): press Clip, then tap tags and playlists on the card for the clip you just saved.
+   PARKED: the old "set it before you clip" row (Next clip name, playlist menu, tag chips). Remove these display:none rules to bring it back. */
+.qline>.qsep,.qline>.dim,#nName,#nPl,.qtags{display:none!important}
+/* No titles on Live / program, Quick replay and Angles (Simon, 2026-11-26): the state moved into the tag on the video. PARKED: remove these rules to bring the titles back. */
+.prog>.phead,.a-ang>.phead{display:none} .a-snab .phead h2{display:none}
+.a-snab .phead .qline{margin-left:0;gap:10px}
+#newPl,#openPl{display:none}   /* PARKED (Simon, 2026-11-26): + and folder in the Clips / Playlist header; the "+" and "+ More" chips do the same. The buttons stay in the page, hidden, because the chips use them. */ .a-snab .phead .qbtns button{min-height:36px;padding:6px 14px;font-size:15px} .a-snab .phead #qlen{min-height:36px}   /* Replay / Clip / length in the title row */
+.lastc{margin-top:0;min-width:0;display:flex;flex-direction:column;gap:7px;padding:8px 12px;border:1px solid var(--line2);border-radius:10px;background:#181818;min-height:40px}
+.lastc.flash{animation:lcflash .9s ease-out} @keyframes lcflash{0%{border-color:var(--teal);box-shadow:0 0 0 3px #1ec8c855}100%{}}
+.lastc .lcn{display:flex;align-items:center;gap:10px;font-size:12px;color:var(--dim);cursor:default;min-width:0}   /* header line: LAST CLIP, name, camera / length pill, Saved ✓ */
+.lastc .lcn .lcl{font-size:10px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--faint,#777)}
+.lastc .lcn .lcm{display:inline-flex;align-items:center;gap:6px;padding:2px 8px;border-radius:6px;background:#ffffff0d;color:#bbb;font-size:12px;white-space:nowrap} .lastc .lcn .lcm i{width:1px;height:10px;background:#ffffff26} .lastc .lcn .lcm .mono{font-family:var(--mono)}
+.lastc .lccue{margin-left:10px;display:inline-flex;align-items:center;gap:6px;padding:4px 12px;font-size:13px;font-weight:600;border-radius:6px;border:1px solid var(--line2);background:var(--panel2);color:var(--text)} .lccue .ic,#cuePl .ic{width:14px;height:14px}   /* Cue looks like the other buttons; amber only while cued */
+.lastc .lccue:hover{border-color:#666} .lastc .lccue.on,#cuePl.on{background:var(--amber);border-color:var(--amber);color:#2a2000}
+#uQ.cued{color:var(--amber)}
+.nextl .box.counting{border-color:var(--teal)} .nextl .box.counting span{font-variant-numeric:tabular-nums}   /* Next counts down while the playlist plays */   /* a cued clip shows amber in Output */
+.lastc .lcsaved{margin-left:auto;color:var(--teal);font-weight:600;opacity:0;transition:opacity .4s} .lastc .lcsaved.show{opacity:1;transition:none}   /* top right: flashes after every change on the card */
+.lastc .lcn b{font-size:15px;min-width:0;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap} .lastc .lcn input{font-size:14px;padding:2px 6px}
+.lastc .lcr{flex:1;min-width:0;display:flex;flex-direction:column;gap:6px}
+.lastc .pv{display:flex;align-items:center;gap:6px;flex-wrap:wrap} .lastc .pv>.dim{font-size:12px;width:52px;flex:none}
+.pchip{display:inline-flex;align-items:center;gap:5px;padding:3px 11px;border-radius:999px;background:var(--panel2);border:1px solid var(--line2);cursor:pointer;font-size:13px;user-select:none;white-space:nowrap}
+.pchip:hover{border-color:#666} .pchip.on{background:var(--teal);border-color:var(--teal);color:var(--tealText);font-weight:600}
+.pchip.pl{border-radius:7px} .pchip.pl.on{background:#1ec8c833;color:var(--text);border-color:var(--teal)}
+.pchip.add{border-style:dashed;background:none;color:var(--dim)}
+.padd{width:150px;font-size:13px;padding:3px 9px;border-radius:999px;border-color:var(--teal)}
+.lastc .none{align-self:center;color:var(--dim);font-size:13px}
+.qbtns{display:flex;gap:12px;align-items:center}
+.qbtns button{font-size:16px;padding:8px 18px;min-height:40px}
+.qbtns button.bare{padding:4px 8px}
+.qrow input{min-height:34px}
+#qlen{min-width:100px;min-height:36px}
+button.bare{background:none;border:none;font-size:16px;padding:4px 6px;color:#bdbdbd}
+button.bare:hover{color:#fff}
+.ic{width:18px;height:18px;vertical-align:-3px;display:inline-block;flex:0 0 auto}
+.ljud .ic,.vol .ic{width:20px;height:20px}
+.transport .play .ic{width:20px;height:20px}
+.tabs .t .ic{width:17px;height:17px;margin-right:6px;vertical-align:-2px}
+.grip .ic{width:16px;height:16px}
+.ck .ic{width:15px;height:15px;color:var(--tealText)}
+.ang .spk .ic{width:16px;height:16px;vertical-align:-3px}
+.viewer .fs .ic{width:20px;height:20px}
+.plhead .more .ic{width:16px;height:16px;color:var(--dim)}
+.foot .teal .ic{margin-right:6px}
+.nextl .box .ic{width:15px;height:15px}
+.foot .ic{margin-right:6px}
+.qrow .dim{white-space:nowrap}
+.tags{justify-content:flex-start !important}
+select.plain,input.plain{background:none;border:none;padding:0;margin-top:10px;font-weight:700;font-size:16px;color:var(--text);-webkit-appearance:none;appearance:none;cursor:pointer}
+input.plain{color:var(--amber);font-size:18px;width:70px;-moz-appearance:textfield}
+input.plain::-webkit-inner-spin-button{display:none}
+.qrow{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.qrow input{flex:1;min-width:120px}
+.tags{display:flex;flex-wrap:nowrap;gap:8px;margin-top:12px;overflow:hidden}
+.tag.fler{border-style:dashed;color:var(--dim)}.tag.fler:hover{color:var(--text)}
+#tagPop{position:fixed;z-index:50;display:none;width:320px;background:var(--panel);border:1px solid var(--line2);border-radius:10px;padding:10px;box-shadow:0 12px 30px #000b}
+#tagPop.show{display:block}
+#tagPop input{width:100%;margin-bottom:10px}
+#tagPop .tlist{display:flex;flex-wrap:wrap;gap:6px;max-height:220px;overflow:auto}
+.tag{font-size:14px;padding:4px 14px;border-radius:999px;background:var(--panel2);border:1px solid var(--line2);cursor:pointer;user-select:none}
+.tag.on{background:var(--teal);border-color:var(--teal);color:var(--tealText);font-weight:600}
+/* angles */
+#angles{display:flex;gap:10px}
+.ang{position:relative;flex:0 0 184px;aspect-ratio:16/10;border-radius:8px;overflow:hidden;border:2px solid transparent;cursor:pointer;background:#000}
+.ang.on{border-color:var(--teal);box-shadow:0 0 0 1px var(--teal)}
+.ang{border-width:3px;border-radius:9px}
+.ang canvas{position:absolute;inset:0;width:100%;height:100%}
+.ang .nm{position:absolute;left:10px;bottom:7px;font-size:15px;font-weight:600;text-shadow:0 1px 2px #000}
+.ang .spk{position:absolute;right:34px;bottom:6px;font-size:15px}
+.ang .m{position:absolute;right:6px;top:6px;bottom:6px;width:22px;display:flex;gap:3px}
+.ang .m i{flex:1;background:#ffffff18;position:relative;overflow:hidden}
+.ang .m i b{position:absolute;left:0;right:0;bottom:0;background:linear-gradient(to top,#22c55e 0%,#4ade80 50%,#facc15 85%,#ef4444 100%)}
+/* right side */
+.side{flex:1;display:flex;flex-direction:column;min-height:0}
+.tabs{display:flex;gap:6px;align-items:center;margin-bottom:14px}
+.tabs button.icon{width:42px;height:42px;padding:0;font-size:18px;display:grid;place-items:center}
+.tabs .t{flex:0 0 auto;padding:10px 34px;font-size:17px;border-radius:9px;border:1px solid var(--line2);background:var(--panel2);font-weight:600;cursor:pointer}
+.tabs .t.on{background:var(--teal);border-color:var(--teal);color:var(--tealText)}
+.tabs .sp{flex:1}
+.plhead{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.plhead{display:none!important}   /* PARKED: "Playlist: name" + rename pencil + Auto-play row; Auto-play moved next to the chips */
+.plbar{display:flex;align-items:flex-start;gap:12px;flex:none;margin-bottom:8px}   /* more room above the column headings */ .plbar .pltabs{flex:1;min-width:0} .plauto{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--dim);white-space:nowrap;padding-top:1px;cursor:default}
+.pltabs{display:flex;flex-wrap:wrap;gap:5px;flex:none;margin:0 0 10px;align-items:center;overflow:hidden;max-height:53px}   /* up to two rows of chips, the rest behind "+ More" */   /* playlist chips, compact version of the tag chips */
+.pltabs .pt{display:inline-flex;align-items:center;gap:5px;flex:none;max-width:150px;padding:2px 10px;min-height:24px;border-radius:999px;background:var(--panel2);border:1px solid var(--line2);color:var(--text);font-size:12px}
+.pltabs .pt span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap} .pltabs .pt b{font-weight:500;opacity:.6}
+.pltabs .pt:hover{border-color:#666} .pltabs .pt.on{background:var(--teal);border-color:var(--teal);color:var(--tealText);font-weight:600}
+.pltabs .pt .ic{width:9px;height:9px} .pltabs .pt.more{border-style:dashed;color:var(--dim);background:none} .pltabs .pt.add{padding:2px 7px;color:var(--dim);background:none} .pltabs .pt.add .ic{width:12px;height:12px}
+.plhead .nm{font-size:19px;font-weight:500}
+.plhead{font-size:15px}
+.plhead .sp{flex:1}
+.times{display:flex;justify-content:space-around;border:1px solid var(--line);border-radius:9px;padding:8px 14px;margin:10px 0;font-size:16px;flex:none}
+.times b{font-weight:500;font-variant-numeric:tabular-nums;margin-left:10px;font-size:17px}
+.times .sep{width:1px;background:var(--line2)}
+.thead,.prow,.crow{display:grid;align-items:center;gap:8px}
+.thead,.prow{grid-template-columns:14px 14px 18px 72px minmax(0,1fr) 72px repeat(4,40px) 24px;column-gap:6px}
+.thead{font-size:12px;color:var(--dim);padding:0 9px 6px;border-bottom:1px solid var(--line);margin-bottom:4px}   /* one header row, lined up with the row cells (rows have 8px padding + 1px border) */
+.thead .trk{text-align:center;font-size:11px;white-space:nowrap} .thead .num,.prow>span:nth-child(3){text-align:center}
+.thead .tr{grid-column:7/11;text-align:center}
+.thead.sub{padding-top:0;margin-top:-4px}.thead.sub span{text-align:center;font-size:11px}
+.list{flex:1 1 auto;overflow:auto;min-height:0}   /* list fills the card, so Total / Next / Play playlist stay pinned at the bottom */
+.cshow{display:flex;align-items:center;gap:8px;padding:0 0 8px;flex:none;font-size:13px} .cshow select{flex:1;min-width:0;padding:4px 8px;font-size:13px}
+.crow .inpl{opacity:0;transition:opacity .12s} .crow:hover .inpl{opacity:1} .inpl{max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}   /* playlist badge only on hover (Simon, 2026-11-26) */
+.inpl{display:inline-flex;align-items:center;gap:2px;margin-left:6px;padding:0 6px;border-radius:999px;background:#1ec8c822;color:var(--teal);font-size:11px;font-weight:600;vertical-align:1px} .inpl .ic{width:9px;height:9px}
+.cfilt{display:flex;flex-wrap:wrap;gap:6px;padding:2px 0 10px;flex:none} .cfilt .tag{font-size:12px;padding:3px 10px} .cfilt .tag b{font-weight:500;opacity:.6;margin-left:3px}
+.prow{padding:6px 8px;border-radius:9px;border:1px solid transparent}
+.prow.now{border-color:var(--teal);background:#1ec8c816}
+.prow.drop{border-top:2px solid var(--teal)}
+.prow img,.crow img{width:72px;height:40px;border-radius:5px;object-fit:cover;display:block}
+.thumb{position:relative}
+.thumb .sn{position:absolute;left:4px;bottom:-4px;background:var(--green);color:#062;font-size:10px;font-weight:700;padding:1px 6px;border-radius:999px}
+.prow .n,.crow .n{font-weight:500;font-size:15px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#dlg .mbox h4{margin:14px 0 6px;font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--dim)}
+#dlg .mbox input{margin:0} #dlg .mbox #mTag{margin-top:10px;margin-bottom:14px}
+.mlist{display:flex;flex-direction:column;gap:2px;max-height:240px;overflow:auto}
+.mrow{display:flex;align-items:center;gap:10px;padding:7px 8px;border-radius:8px;cursor:pointer;font-size:14px} .mrow:hover{background:var(--panel2)} .mrow .ck{margin:0;flex:none}
+.mrow .mn{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap} .mrow.madd{color:var(--dim)} .mrow.madd .ic{width:16px;height:16px}
+.mrow.cur{background:var(--panel2);box-shadow:inset 3px 0 0 var(--teal)} .mrow .mdel{padding:2px 6px;color:var(--dim)} .mrow.sure .mdel{color:var(--red);font-weight:600}
+#dlg .mbox .addh{display:flex;align-items:center;margin-bottom:10px} #dlg .mbox .addh b{flex:1;font-size:16px} #dlg .mbox .x{padding:0 6px;font-size:20px;line-height:1;color:var(--dim)}
+#dlg .mbox .pv{display:flex;align-items:center;gap:6px;flex-wrap:wrap;padding:6px 0} #dlg .mbox .pv>.dim{font-size:12px;width:52px;flex:none} #dlg .mbox .padd{margin:0}
+#cmenu{position:fixed;z-index:65;display:none;min-width:170px;padding:5px;background:var(--panel,#1e1e1e);border:1px solid var(--line2);border-radius:9px;box-shadow:0 12px 30px #000a}
+#cmenu.show{display:block} #cmenu button{display:block;width:100%;text-align:left;border:none;background:none;padding:7px 10px;border-radius:6px;font-size:13px;color:var(--text)} #cmenu button:hover{background:var(--panel2)} #cmenu button.danger{color:var(--red)} #cmenu hr{border:none;border-top:1px solid var(--line);margin:4px 2px}
+.mtags{display:flex;flex-wrap:wrap;gap:6px} .mtags .tag{font-size:13px;padding:3px 11px}
+.nedit{width:100%;font-size:15px;font-weight:500;padding:2px 6px;border-color:var(--teal)}
+.prow .c,.crow .c{font-size:14px;color:var(--dim)}
+.prow .mono,.crow .mono{font-family:inherit;font-variant-numeric:tabular-nums;font-size:15px}
+.grip{cursor:grab;color:var(--faint);user-select:none}
+.ck{width:22px;height:22px;border-radius:5px;border:2px solid #9a9a9a;cursor:pointer;margin:auto;display:grid;place-items:center;color:var(--tealText);font-size:13px;font-weight:800}
+.ck.on{background:var(--teal);border-color:var(--teal)}
+.more{background:none;border:none;padding:2px 4px;color:var(--dim)}
+/* subtle hover on the row icons (play, +, bin, ⋯) and the playlist rename pencil */
+.crow .more,.prow .more,.plhead .more{border-radius:6px;padding:4px 6px;transition:background .12s,color .12s}
+.crow .more:hover,.prow .more:hover,.plhead .more:hover{background:#ffffff14;color:var(--text)} .crow .more:hover .ic,.plhead .more:hover .ic{color:var(--text)}
+.crow .more[data-a="del"]:hover{color:var(--red)} .crow .more[data-a="del"]:hover .ic{color:var(--red)}
+.crow{grid-template-columns:72px minmax(0,1fr) 70px auto;padding:6px 8px;border-radius:9px;border:1px solid transparent}
+.crow.sel,.prow.sel{border-color:#1ec8c866;background:#1ec8c80f}   /* active clip: subtle outline and tint, no bright edge */
+.crow:hover{background:#ffffff08}
+.nextl{display:flex;gap:10px;align-items:center;margin-top:8px}
+.nextl .box{flex:1;display:flex;gap:12px;align-items:center;border:1px solid #1ec8c866;border-radius:9px;padding:9px 16px;background:#1ec8c80d;font-size:16px}
+.nextl button.icon{width:42px;height:40px;padding:0;display:grid;place-items:center}
+.foot{display:flex;gap:8px;align-items:center;margin-top:14px;min-width:0}
+.foot button{font-size:15px;padding:9px 13px;min-height:42px;white-space:nowrap;flex-shrink:0}
+.foot button.teal{font-size:16px;padding:10px 18px;flex-shrink:1;min-width:0;overflow:hidden;text-overflow:ellipsis}   /* footer fits with Cue added */
+.foot .sp{flex:1}
+.empty{color:var(--dim);text-align:center;padding:30px 10px}
+.ugrid{display:grid;grid-template-columns:1fr 1fr 1.5fr 1fr;gap:12px;font-size:15px;margin-top:4px}
+.ugrid span{color:var(--dim)}
+.ugrid b{display:block;margin-top:10px;font-size:16px}
+.ugrid input{width:60px;margin-top:4px;color:var(--amber);font-weight:700}
+.unote{margin-top:18px;font-size:14px;color:#cfcfcf}
+#toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:#2a2a2a;border:1px solid var(--line2);padding:9px 16px;border-radius:9px;opacity:0;transition:opacity .2s;pointer-events:none;z-index:40}
+#toast.show{opacity:1}
+@media (max-width:700px){ body{overflow:auto} #app{height:auto} main{grid-template-columns:1fr} .side{min-height:520px} .vid{max-height:none} }
+
+/* in-page dialog (never the browser's own confirm / prompt / alert) */
+#dlg{position:fixed;inset:0;z-index:60;display:none;align-items:center;justify-content:center;background:#0009}
+#dlg.show{display:flex}
+#dlg .box{width:min(420px,calc(100vw - 32px));background:var(--panel,#1e1e1e);border:1px solid var(--line2,#444);border-radius:12px;padding:18px 20px;box-shadow:0 20px 50px #000b}
+#dlg h3{margin:0 0 6px;font-size:17px;font-weight:600}
+#dlg p{margin:0 0 14px;color:var(--dim,#a0a0a0);font-size:14px}
+#dlg input{width:100%;margin-bottom:14px}
+#dlg .row{display:flex;justify-content:flex-end;gap:10px}
+#dlg .ok{background:var(--teal,var(--accent));border-color:var(--teal,var(--accent));color:var(--tealText,var(--accentText,#fff));font-weight:600}
+#dlg .ok.danger{background:var(--red);border-color:var(--red);color:#fff}
+</style>
+</head>
+<body>
+<div id="app">
+<header>
+  <h1>Replay Channel</h1><span class="ch">AC03</span>
+  <span class="sp"></span>
+  <span class="pill ok"><i></i>Connected</span>
+  <span class="pill air" id="tally" title="Demo: click to pretend the director took the replay to air"><i></i><span>NOT ON AIR</span></span>
+  <button class="gear" id="gear" title="Settings"></button>
+</header>
+<main>
+  <div class="a-top">
+    <section class="panel prog">
+      <div class="phead"><h2>Live / program</h2><span class="sp"></span><span class="pill" id="state">Live</span></div>
+      <div class="viewer" id="viewer">
+        <div class="vleft">
+          <div class="mtr"><div class="bars"><div><span>L</span><i><b id="mL"></b></i></div><div><span>R</span><i><b id="mR"></b></i></div></div>
+            <div class="scale"><span>0</span><span>-6</span><span>-12</span><span>-18</span><span>-24</span><span>-30</span><span>-36</span><span>-40</span></div></div>
+          <div class="ljud"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H2v6h4l5 4V5z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M19 5a10 10 0 0 1 0 14"/></svg><button class="sw on" id="ljud" title="Sound on/off"></button></div>
+          <div class="vol"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 14v-2a9 9 0 0 1 18 0v2"/><path d="M21 19a2 2 0 0 1-2 2h-1v-7h3zM3 19a2 2 0 0 0 2 2h1v-7H3z"/></svg> <input type="range" id="vol" min="-40" max="0" value="-6"><span id="volV">-6 dB</span></div>
+        </div>
+        <div class="vid" id="vid"><canvas id="pc"></canvas><span class="live" id="liveTag">LIVE</span><span class="ctx" id="ctx" style="display:none"><span id="ctxT"></span><button id="ctxX" title="Close the clip and stay on this frame (Esc)">×</button></span><span class="tc" id="tc" title="Timecode">--:--:--:--</span><span class="angtxt" id="angTxt"></span><button class="fs" id="fs" title="Full screen"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3M21 8V5a2 2 0 0 0-2-2h-3M3 16v3a2 2 0 0 0 2 2h3M16 21h3a2 2 0 0 0 2-2v-3"/></svg></button></div>
+      </div>
+      <div class="scrub"><span id="barL">--:--:--</span>
+        <div id="bar"><div class="track"></div><div class="fill" id="fill"></div><div id="cbars"></div><div id="rng"></div><div id="mks"></div><div class="head" id="head"></div></div>
+        <span id="barR">--:--:--</span>
+        <select id="winSel" title="How much time the timeline shows"><option value="120">2 min</option><option value="600">10 min</option><option value="1800">30 min</option><option value="0">All</option></select></div>
+      <div class="transport">
+        <button data-j="-10">-10 s</button><button data-j="-1">-1 s</button>
+        <button class="play" id="playBtn" title="Play / pause (Space)"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 4.5v15l12.5-7.5z" fill="currentColor" stroke="none"/></svg></button>
+        <button data-j="1">+1 s</button><button data-j="10">+10 s</button>
+        <button id="liveBtn" title="Back to live (Shift+Space)">Back to live</button>
+        <span class="mkgrp"><button id="mkPrev" title="Previous mark ([)"><svg class="ic" viewBox="0 0 24 24"><path d="M17 4.5v15L4.5 12z" fill="currentColor"/></svg></button><button id="mkAdd" title="Drop a mark here (M). Click a mark on the timeline to go there, right-click to delete it.">◆</button><button id="mkNext" title="Next mark (])"><svg class="ic" viewBox="0 0 24 24"><path d="M7 4.5v15L19.5 12z" fill="currentColor"/></svg></button></span>
+        <button id="markIn" title="Mark In (I)">Mark In</button>
+        <button id="markOut" title="Mark Out (O). With Mark In set, this saves the clip.">Mark Out</button>
+      </div>
+    </section>
+    <section class="panel speed"><span class="lbl">Speed</span>
+      <div class="spbox"><b id="spdV">100%</b><div id="fader" title="Drag to set the speed. It clicks into 0, 25, 50, 100 and 200 and lands on the nearest when you let go. Hold Shift for any speed."><div class="slot"><div class="fil" id="fil"></div></div><div id="ticks"></div><div class="cap" id="cap"></div></div><input type="hidden" id="spd" value="100"><b>0%</b></div>
+      <button class="bare ramp" id="rampBtn" title="How long the speed takes to ease to the fader when you let go. Click to change.">Ramp <b id="rampV"></b></button></section>
+  </div>
+
+  <section class="panel a-snab">
+    <div class="phead"><h2>Quick replay / clip</h2><div class="qline">
+      <div class="qbtns"><button id="qReplay"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg> Replay <span class="ql">10 s</span></button>
+        <button class="teal" id="qClip"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M20 4 8.12 15.88M14.47 14.48 20 20M8.12 8.12 12 12"/></svg> Clip <span class="ql">10 s</span></button>
+        <button class="bare" id="qClear" title="Clear name and tags"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/></svg></button></div>
+      <select id="qlen" title="Length for Replay and Clip"><option value="5">5 s</option><option value="10" selected>10 s</option><option value="15">15 s</option><option value="30">30 s</option></select>
+      <span class="qsep"></span>
+      <span class="dim">Next clip</span><input id="nName" placeholder="Name (optional)"><select id="nPl" title="Also put the next saved clip in this playlist. Stays set until you change it."></select><input id="nTag" type="hidden">
+    </div></div>
+    <div class="qtags"><span class="dim">Tags</span><div class="tags" id="tags"></div></div>
+    <div class="lastc" id="lastC"></div>
+  </section>
+
+  <section class="panel a-ang">
+    <div class="phead"><h2>Angles</h2></div>
+    <div id="angles"></div>
+  </section>
+
+  <section class="panel side a-pl">
+    <div class="tabs"><div class="t" data-s="clips" id="tClips">Clips</div><div class="t" data-s="pl" id="tPl">Playlist</div><span class="sp"></span>
+      <button class="icon" id="newPl" title="New playlist"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg></button><button class="icon" id="openPl" title="Saved playlists"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg></button><button class="icon" id="morePl" title="Start fresh: clear clips, marks and playlist"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="5" cy="12" r="1.4" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.4" fill="currentColor" stroke="none"/><circle cx="19" cy="12" r="1.4" fill="currentColor" stroke="none"/></svg></button></div>
+    <div id="sideBody" class="side"></div>
+  </section>
+
+  <section class="panel a-ut">
+    <div class="phead"><h2>Output</h2><span class="sp"></span><span class="pill air" id="tally2"><i></i><span>NOT ON AIR</span></span></div>
+    <div class="ugrid">
+      <div><span>Cued</span><b id="uQ">–</b></div>
+      <div><span>Playing clip</span><b id="uP">–</b></div>
+      <div><span>At clip end</span><select id="uEnd" class="plain"><option value="hold">Hold last frame</option><option value="live">Back to live</option><option value="loop">Loop</option></select></div>
+      <div><span>Seconds after</span><input id="uFa" class="plain" type="number" min="0" max="10" step="0.1"></div>
+    </div>
+  </section>
+</main>
+</div>
+<div id="toast"></div>
+<div id="dlg"></div>
+<div id="sets"></div>
+<div id="tagPop"></div>
+
+<script src="scene.js"></script>
+<script>
+// ===== The replay mockup, running. Scene drawing from scene.js (skate). =====
+const FPS=25, KEY="openreplay.mock.v1"   /* own browser storage, so this copy and the original page do not overwrite each other */;
+const saved=(()=>{ try{ const o=JSON.parse(localStorage.getItem(KEY)||"null"); if(o&&o.v===1) return o; /* kept until cleared, no expiry */ }catch(e){} return null; })();
+const start=saved?saved.start:Date.now()-25*60*1000;
+const mid=new Date(start); mid.setHours(0,0,0,0); const tod0=(start-mid.getTime())/1000;
+const liveT=()=>(Date.now()-start)/1000-0.08;
+const CFG={scene:"Skate"};
+const $=id=>document.getElementById(id);
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+function tc(t){ let s=tod0+t; const f=Math.floor((s%1)*FPS); s=Math.floor(s); return [Math.floor(s/3600)%24,Math.floor(s/60)%60,s%60,f].map(n=>String(n).padStart(2,"0")).join(":"); }
+function hms(t){ const s=Math.floor(tod0+t); return [Math.floor(s/3600)%24,Math.floor(s/60)%60,s%60].map(n=>String(n).padStart(2,"0")).join(":"); }
+function len(d){ d=Math.max(0,Math.round(d)); const h=Math.floor(d/3600); return (h?[h,Math.floor(d/60)%60,d%60]:[Math.floor(d/60)%60,d%60]).map(n=>String(n).padStart(2,"0")).join(":"); }   /* 00:04, or 01:02:03 once there are hours */
+function toast(m){ const e=$("toast"); e.textContent=m; e.classList.add("show"); clearTimeout(e._t); e._t=setTimeout(()=>e.classList.remove("show"),1900); }
+
+const ICONS={"film": "<rect x=\"3\" y=\"4\" width=\"18\" height=\"16\" rx=\"2\"/><path d=\"M7 4v16M17 4v16M3 9h4M3 15h4M17 9h4M17 15h4\"/>", "plist": "<path d=\"M3 6h12M3 12h12M3 18h7\"/><path d=\"M15 15v6l5-3z\" fill=\"currentColor\"/>", "cue": "<path d=\"M6 5v14\"/><path d=\"M19 5 9 12l10 7z\" fill=\"currentColor\" stroke=\"none\"/>", "bin": "<path d=\"M3 6h18\"/><path d=\"M8 6V4h8v2\"/><path d=\"M19 6l-1 14H6L5 6\"/><path d=\"M10 11v6M14 11v6\"/>", "gear": "<circle cx=\"12\" cy=\"12\" r=\"3\"/><path d=\"M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z\"/>", "vol": "<path d=\"M11 5 6 9H2v6h4l5 4V5z\"/><path d=\"M15.5 8.5a5 5 0 0 1 0 7\"/><path d=\"M19 5a10 10 0 0 1 0 14\"/>", "hp": "<path d=\"M3 14v-2a9 9 0 0 1 18 0v2\"/><path d=\"M21 19a2 2 0 0 1-2 2h-1v-7h3zM3 19a2 2 0 0 0 2 2h1v-7H3z\"/>", "full": "<path d=\"M8 3H5a2 2 0 0 0-2 2v3M21 8V5a2 2 0 0 0-2-2h-3M3 16v3a2 2 0 0 0 2 2h3M16 21h3a2 2 0 0 0 2-2v-3\"/>", "replay": "<path d=\"M3 12a9 9 0 1 0 3-6.7L3 8\"/><path d=\"M3 3v5h5\"/>", "cut": "<circle cx=\"6\" cy=\"6\" r=\"3\"/><circle cx=\"6\" cy=\"18\" r=\"3\"/><path d=\"M20 4 8.12 15.88M14.47 14.48 20 20M8.12 8.12 12 12\"/>", "grid": "<rect x=\"3\" y=\"3\" width=\"7\" height=\"7\" rx=\"1.5\"/><rect x=\"14\" y=\"3\" width=\"7\" height=\"7\" rx=\"1.5\"/><rect x=\"3\" y=\"14\" width=\"7\" height=\"7\" rx=\"1.5\"/><rect x=\"14\" y=\"14\" width=\"7\" height=\"7\" rx=\"1.5\"/>", "plus": "<path d=\"M12 5v14M5 12h14\"/>", "folder": "<path d=\"M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z\"/>", "more": "<circle cx=\"5\" cy=\"12\" r=\"1.4\" fill=\"currentColor\" stroke=\"none\"/><circle cx=\"12\" cy=\"12\" r=\"1.4\" fill=\"currentColor\" stroke=\"none\"/><circle cx=\"19\" cy=\"12\" r=\"1.4\" fill=\"currentColor\" stroke=\"none\"/>", "edit": "<path d=\"M17 3a2.85 2.85 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z\"/>", "grip": "<circle cx=\"9\" cy=\"6\" r=\"1.4\" fill=\"currentColor\" stroke=\"none\"/><circle cx=\"15\" cy=\"6\" r=\"1.4\" fill=\"currentColor\" stroke=\"none\"/><circle cx=\"9\" cy=\"12\" r=\"1.4\" fill=\"currentColor\" stroke=\"none\"/><circle cx=\"15\" cy=\"12\" r=\"1.4\" fill=\"currentColor\" stroke=\"none\"/><circle cx=\"9\" cy=\"18\" r=\"1.4\" fill=\"currentColor\" stroke=\"none\"/><circle cx=\"15\" cy=\"18\" r=\"1.4\" fill=\"currentColor\" stroke=\"none\"/>", "play": "<path d=\"M7 4.5v15l12.5-7.5z\" fill=\"currentColor\" stroke=\"none\"/>", "pause": "<rect x=\"6\" y=\"4.5\" width=\"4\" height=\"15\" rx=\"1\" fill=\"currentColor\" stroke=\"none\"/><rect x=\"14\" y=\"4.5\" width=\"4\" height=\"15\" rx=\"1\" fill=\"currentColor\" stroke=\"none\"/>", "ff": "<path d=\"M2.5 5.5v13l9-6.5zM12.5 5.5v13l9-6.5z\" fill=\"currentColor\" stroke=\"none\"/>", "stop": "<rect x=\"5\" y=\"5\" width=\"14\" height=\"14\" rx=\"2\" fill=\"currentColor\" stroke=\"none\"/>", "check": "<path d=\"M5 12.5l4.5 4.5L19 7.5\" stroke-width=\"3.2\"/>"};
+const I=n=>`<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${ICONS[n]}</svg>`;
+const CAMS2=[{l:"A",name:"Camera 1"},{l:"B",name:"Camera 2"},{l:"C",name:"Camera 3"},{l:"E",name:"Camera 4"}];   // skate: Wide, Tight, Follow, Rail Low
+const camName=l=>(CAMS2.find(c=>c.l===l)||{}).name||l;
+const camObj=l=>CAMS.find(c=>c.l===l);
+const TAGS=["Make","Bail","Kickflip","Boardslide","Tre flip","Heelflip","50-50","Ollie","Rail","Best trick","Slam"];   // first five are the default row
+
+const st={win:600,tagUse:{},marks:[],mseq:1,t:liveT(),live:true,play:false,speed:100,cam:"A",inT:null,outT:null,clipId:null,run:null,side:"pl",
+  clips:[],seq:1,pl:{name:"Best tricks",items:[],auto:true},qlen:10,next:{name:"",tag:"",tags:[]},
+  endMode:"hold",framesAfter:25,air:false,muted:false,nextIdx:0};
+// Demo session: real attempts from the skate scene, named and tagged after what happens in them (trick, make or bail, rail),
+// in two playlists: "Best tricks" (makes) and "Slams" (bails). Rail tricks use the Rail Low camera.
+function seed(){ const lt=liveT(), K=Math.floor(lt/SK_P)-1, makes=[], bails=[];
+  for(let k=K-1;k>K-160&&k>0&&(makes.length<4||bails.length<2);k-=2){ const a=skAttempt(k); (a.bail?bails:makes).length<(a.bail?2:4)&&(a.bail?bails:makes).push(k); }
+  const mk=k=>{ const a=skAttempt(k), t0=k*SK_P; return {id:st.seq++,name:`${a.trick}${a.bail?" bail":""} · rider ${a.rider+1}`,cam:a.rail?"E":["A","B","C"][((k%3)+3)%3],
+    inT:t0+SK_TP-1.3,outT:t0+skLand(a)+(a.bail?2.6:1.2),tags:[a.trick,a.bail?"Bail":"Make",...(a.rail?["Rail"]:[])]}; };
+  st.clips=[...makes,...bails].sort((x,y)=>x-y).map(mk);
+  const item=c=>({cid:c.id,tracks:[1,1,0,0]});
+  st.pl={id:1,name:"Best tricks",items:st.clips.filter(c=>c.tags.includes("Make")).map(item),auto:true};
+  st.pls=[st.pl,{id:2,name:"Slams",items:st.clips.filter(c=>c.tags.includes("Bail")).map(item),auto:true}];
+  st.clips.forEach(c=>c.tags.forEach(t=>st.tagUse[t]=(st.tagUse[t]||0)+1)); }
+const adopt=o=>Object.assign(st,{win:o.win??600,tagUse:o.tagUse||{},hiddenTags:o.hiddenTags||[],marks:o.marks||[],mseq:o.mseq||1,clips:o.clips,seq:o.seq,pl:o.pl,qlen:o.qlen??st.qlen,endMode:o.endMode??st.endMode,framesAfter:o.framesAfter??st.framesAfter,cam:o.cam??st.cam,side:o.side||st.side,rampLen:o.rampLen??st.rampLen,nextPl:o.nextPl||0});
+if(saved&&saved.clips) adopt(saved); else seed();
+// clips saved while the page was in Swedish get English names
+st.clips.forEach(c=>{ if(c.name==="Snabbrepris") c.name="Quick replay"; else c.name=c.name.replace(/^Klipp (\d+)$/,"Clip $1"); c.tags=c.tags.map(t=>({Intervju:"Interview","Täckbild":"Cover"})[t]||t); });
+if(st.pl.name==="Ny playlist") st.pl.name="New playlist";
+// Several named playlists: st.pls holds them all, st.pl is the one shown under the Playlist tab.
+function initPls(o){ if(o&&o.pls&&o.pls.length){ st.pls=o.pls; st.pl=st.pls.find(p=>p.id===o.plId)||st.pls[0]; } else if(!st.pls){ if(st.pl.id==null) st.pl.id=1; st.pls=[st.pl]; }
+  st.plSeq=Math.max(...st.pls.map(p=>p.id))+1; }
+initPls(saved); st.nextPl=0;   /* the "next clip" playlist menu is parked, so it must not stay set from an older session */
+const newPlaylist=(name,items=[])=>{ const p={id:st.plSeq++,name,items,auto:true}; st.pls.push(p); return p; };
+// Switching is blocked while a playlist is actually playing out, so the running reel never drops off air by a stray click.
+function switchPl(p){ if(p===st.pl) return; if(st.run&&st.play&&!st.run.held){ toast(`"${st.pl.name}" is playing. Pause it first (Space).`); return renderSide(); }
+  st.pl=p; st.run=null; st.nextIdx=p.items.length?0:null; st.side="pl"; renderSide(); }
+let noSave=false;
+// Only writes when something in this tab changed. A second tab of the page used to write its old copy back every 2 s
+// and wipe new clips; now each tab takes over what another tab saves (the "storage" event) instead of overwriting it.
+let lastJson=null;
+function snapshot(){ return JSON.stringify({v:1,start,win:st.win,tagUse:st.tagUse,hiddenTags:st.hiddenTags||[],marks:st.marks,mseq:st.mseq,clips:st.clips,seq:st.seq,pl:st.pl,qlen:st.qlen,endMode:st.endMode,framesAfter:st.framesAfter,cam:st.cam,side:st.side,rampLen:st.rampLen,pls:st.pls,plId:st.pl.id,nextPl:st.nextPl,setOpen:$("sets").classList.contains("show"),setTab}); }
+function persist(){ if(noSave) return; const j=snapshot();
+  if(j===lastJson) return; try{ localStorage.setItem(KEY,j); lastJson=j; }catch(e){} }
+addEventListener("storage",e=>{ if(e.key!==KEY) return; if(!e.newValue){ noSave=true; return location.reload(); } /* Start fresh in another tab */
+  try{ const o=JSON.parse(e.newValue); if(!o||!o.clips) return; adopt(o); initPls(o); lastJson=snapshot();   /* remember our own version of it, so we never echo it back */ if(st.run&&!st.pl.items[st.run.i]) st.run=null; if(st.clipId!=null&&!st.clips.some(c=>c.id===st.clipId)) st.clipId=null;
+    thumbs.clear(); renderTags(); if(editingNow()) sidePending=true; else renderSide(); }catch(err){} });
+setInterval(persist,2000); addEventListener("beforeunload",persist); addEventListener("pagehide",persist);
+document.addEventListener("visibilitychange",()=>{ if(document.hidden) persist(); });
+let saveSoon=null; const persistSoon=()=>{ clearTimeout(saveSoon); saveSoon=setTimeout(persist,150); };   // called after every change to clips or the playlist
+const clipById=id=>st.clips.find(c=>c.id===id);
+const loaded=()=>st.clipId!=null?clipById(st.clipId):null;
+
+// ---------- transport ----------
+function setSpeed(s){ st.ramp=null; if(typeof lev!=="undefined") lev.target=Math.abs(s); st.speed=s; $("spd").value=s; if(st.live&&s<100){ st.live=false; st.play=true; } else if(!st.live&&s>0) st.play=true; if(s===0) st.play=false; }
+function togglePlay(){ if(st.live){ st.live=false; st.play=false; return; } const c=loaded(); if(!st.play&&c&&st.t>=c.outT-0.02) st.t=c.inT; if(!st.play&&st.speed===0) setSpeed(100); st.play=!st.play; }
+function jump(s){ if(s>0&&(st.live||st.t+s>=liveT()-0.05)) return st.live||goLive(); st.live=false; st.t=Math.max(0,Math.min(liveT(),st.t+s)); }
+// ---------- speed ramp: the fader is set while you hold it, and the speed eases there when you let go ----------
+const RAMPS=[0,0.3,0.6,1]; st.rampLen=st.rampLen??0.6; st.ramp=null;
+function rampTo(to){
+  if(st.live&&to>=100){ if(to>100) toast("Live can't go faster. 200% works when you play back from the recording."); lev.target=100; return; }
+  const from=st.live?100:st.play?st.speed:0; st.live=false; st.play=true; if(st.run) st.run.held=false;
+  const dur=(st.rampLen||0)*Math.min(1,Math.abs(to-from)/100+0.35);
+  if(!dur||from===to){ st.ramp=null; st.speed=to; if(to===0) st.play=false; return; }
+  st.speed=from; st.ramp={from,to,t0:performance.now(),dur:dur*1000}; }
+function stepRamp(now){ const r=st.ramp; if(!r) return; const k=Math.min(1,(now-r.t0)/r.dur), e=k<.5?2*k*k:1-(-2*k+2)**2/2;
+  st.speed=r.from+(r.to-r.from)*e; if(k>=1){ st.speed=r.to; st.ramp=null; if(r.to===0) st.play=false; } }
+function goLive(){ st.clipId=null; st.run=null; st.live=true; st.play=false; setSpeed(100); renderSide(); }
+function saveClip(a,b,cam){ [...st.next.tags,...(st.next.tag.trim()?[st.next.tag.trim()]:[])].forEach(t=>st.tagUse[t]=(st.tagUse[t]||0)+1); const c={id:st.seq,name:st.next.name.trim()||`Clip ${st.seq}`,cam,inT:a,outT:b,tags:[...st.next.tags,...(st.next.tag.trim()?[st.next.tag.trim()]:[])]}; st.seq++;
+  st.clips.push(c); st.cardId=c.id; const pl=st.pls.find(p=>p.id===st.nextPl); if(pl){ pl.items.push({cid:c.id,tracks:[1,1,0,0]}); if(pl===st.pl&&st.nextIdx==null) st.nextIdx=0; }   /* the playlist choice stays set, name and tags reset */
+  st.next={name:"",tag:"",tags:[]}; $("nName").value=""; $("nTag").value=""; renderTags(); renderSide(); toast(pl?`Saved ${c.name} to ${pl.name}`:`Saved ${c.name}`); drawLast(true); }
+// ---------- clip edit mode ----------
+// Load a clip (click it in Clips) and the timeline zooms in to it. Mark In / Mark Out, or dragging the IN and OUT
+// handles, trim that clip. A tag on the video says which clip you are editing; × or Back to live closes it.
+const editing=()=>{ const c=loaded(); return c&&!st.run?c:null; };
+function closeClip(){ st.clipId=null; st.run=null; st.play=false; renderSide(); }
+function markIn(){ const c=editing(); if(c){ if(st.t>=c.outT-0.1) return toast("In must be before Out"); c.inT=st.t; thumbs.clear(); renderSide(); return toast(`${c.name}: In moved`); }
+  st.inT=st.t; if(st.outT!=null&&st.outT<=st.inT) st.outT=null; }
+function markOut(){ const c=editing(); if(c){ if(st.t<=c.inT+0.1) return toast("Out must be after In"); c.outT=st.t; renderSide(); return toast(`${c.name}: Out moved`); }
+  if(st.inT==null||st.t<=st.inT){ st.outT=st.t; return toast("Set Mark In first"); } saveClip(st.inT,st.t,st.cam); st.inT=st.outT=null; }
+// ---------- marks: points on the recording you can jump back to (numbered in time order) ----------
+const marksSorted=()=>[...st.marks].sort((a,b)=>a.t-b.t);
+function addMark(){ const t=st.live?liveT():st.t; if(st.marks.some(m=>Math.abs(m.t-t)<0.5)) return toast("There is already a mark here");
+  const m={id:st.mseq++,t}; st.marks.push(m); toast(`Mark ${marksSorted().indexOf(m)+1}`); }
+function gotoMark(m){ if(!m) return; st.run=null; const c=loaded(); if(c&&(m.t<c.inT-2||m.t>c.outT+2)) st.clipId=null; st.live=false; st.play=false; st.t=m.t; renderSide(); }
+function stepMark(d){ const cur=st.live?liveT():st.t, ms=marksSorted(); const m=d<0?[...ms].reverse().find(m=>m.t<cur-0.3):ms.find(m=>m.t>cur+0.3); if(!m) return toast(ms.length?"No more marks":"No marks yet (M)"); gotoMark(m); }
+function quickReplay(){ st.clipId=null; st.run=null; st.live=false; st.t=liveT()-st.qlen; if(st.speed===100) setSpeed(50); st.play=true; }
+function quickClip(){ const lt=liveT(); saveClip(lt-st.qlen,lt,st.cam); }
+// Loading a clip without playing it cues it: output parked on its In frame, paused, ready to roll (Space / Play).
+// The cue ends as soon as it plays, the playhead moves off In, or the clip is closed.
+function loadClip(id,play){ const c=clipById(id); if(!c) return; st.run=null; st.clipId=id; st.cardId=id; st.cam=c.cam; st.t=c.inT; st.live=false; st.play=!!play; st.cue=!play; if(play&&st.speed===0) setSpeed(100); renderSide(); }
+function cueClip(id){ loadClip(id,false); const c=clipById(id); if(c) toast(`Cued ${c.name}. Space rolls it.`); }
+
+// ---------- playlist ----------
+function playIndex(i){ const it=st.pl.items[i]; const c=it&&clipById(it.cid); if(!c) return; st.clipId=c.id; st.cardId=c.id; st.cam=it.cam||c.cam; st.t=c.inT; st.live=false; st.play=true; if(st.speed===0) setSpeed(100); st.run={i,held:false}; st.nextIdx=i+1<st.pl.items.length?i+1:null; renderSide(); }
+function playPlaylist(){ if(!st.pl.items.length) return toast("The playlist is empty"); if(st.run&&!st.run.held&&st.play){ st.run=null; st.play=false; renderSide(); return; } playIndex(st.nextIdx??0); }
+const postRoll=()=>(st.framesAfter||0)/FPS;
+function clipEnd(c){ return st.run&&st.pl.auto&&st.nextIdx!=null?c.outT:c.outT+postRoll(); }
+function onClipEnd(){ const c=loaded(), end=clipEnd(c);
+  if(st.run){ if(st.pl.auto&&st.nextIdx!=null) return playIndex(st.nextIdx); st.t=end; st.play=false; st.run.held=true; if(st.nextIdx==null&&st.endMode==="live") return goLive(); renderSide(); return; }
+  if(st.endMode==="live") return goLive(); if(st.endMode==="loop"){ st.t=c.inT; return; } st.t=end; st.play=false; }
+function moveItem(f,t){ if(t<0||t>=st.pl.items.length||f===t) return; const [x]=st.pl.items.splice(f,1); st.pl.items.splice(t,0,x); if(st.run){ if(st.run.i===f) st.run.i=t; else if(f<st.run.i&&t>=st.run.i) st.run.i--; else if(f>st.run.i&&t<=st.run.i) st.run.i++; } renderSide(); }
+
+// ---------- thumbs ----------
+const thumbs=new Map();
+function thumb(c){ const k=`${c.cam}:${c.inT.toFixed(2)}`; if(thumbs.has(k)) return thumbs.get(k);
+  const cv=document.createElement("canvas"); cv.width=160; cv.height=90; drawScene(cv.getContext("2d"),160,90,camObj(c.cam),c.inT+Math.min(2,(c.outT-c.inT)/2),{thumb:true});
+  const u=cv.toDataURL("image/jpeg",0.75); thumbs.set(k,u); return u; }
+
+// ---------- side ----------
+// Double-click a clip name (Clips or Playlist) to rename it in place: Enter or clicking away saves, Esc cancels.
+// The first click on a clip in Clips selects it and redraws the list, so the browser loses the double-click. Catch the
+// second click (e.detail===2) on a name directly, before the row's own click handler runs, and rename from there.
+$("sideBody").addEventListener("click",e=>{ if(e.detail!==2) return; const n=e.target.closest(".n[data-cid]"); if(!n) return; e.stopPropagation(); startRename(n); },true);
+$("sideBody").addEventListener("dblclick",e=>{ const n=e.target.closest(".n[data-cid]"); if(n){ e.stopPropagation(); startRename(n); } });
+function startRename(n){ const c=clipById(+n.dataset.cid); if(!c||!n.isConnected) return; const row=n.closest("[draggable]"); if(row) row.draggable=false;
+  const inp=document.createElement("input"); inp.className="nedit"; inp.value=c.name; n.replaceWith(inp); inp.focus(); inp.select();
+  let done=false; const end=save=>{ if(done) return; done=true; const v=inp.value.trim(); if(save&&v&&v!==c.name){ c.name=v; toast(`Renamed to ${v}`); } inp.onblur=null; inp.blur(); renderSide(); };
+  inp.onkeydown=ev=>{ ev.stopPropagation(); if(ev.key==="Enter") end(true); else if(ev.key==="Escape") end(false); };
+  inp.onblur=()=>end(true); ["click","pointerdown","mousedown"].forEach(t=>inp.addEventListener(t,ev=>ev.stopPropagation())); }
+// ---------- Last clip card: tag after ----------
+// Press Clip or Mark Out, then one tap per tag / playlist for that clip (tap again to undo). "+ Tag" and "+ Playlist"
+// make a new one right there and put the clip in it. Double-click the name to rename. Tag order is fixed per page load,
+// so chips don't jump under your finger; new tags are added at the end.
+var lcOrder=null, lcAdding=null;   // var: renderSide may run before this line
+const lastClip=()=>st.clips.reduce((a,c)=>!a||c.id>a.id?c:a,null);
+// The card shows the clip you clicked or that is playing (st.cardId); saving a new clip takes the card back to it.
+const cardClip=()=>clipById(st.cardId)||lastClip();
+let lcSavedT=0;
+function savedFlash(){ lcSavedT=performance.now(); requestAnimationFrame(()=>{ const e=$("lcSaved"); if(!e) return; e.classList.add("show"); setTimeout(()=>e.classList.remove("show"),1200); }); }
+function drawLast(flash){ const box=$("lastC"); if(!box) return; const c=cardClip();
+  if(!lcOrder) lcOrder=topTags();
+  if(!c){ box.innerHTML=`<span class="none">Press Clip or Mark Out. The clip shows up here to tag and put in a playlist.</span>`; return; }
+  const inP=p=>p.items.some(it=>it.cid===c.id), tags=lcOrder.concat(c.tags.filter(t=>!lcOrder.includes(t)));
+  box.innerHTML=`<div class="lcn" title="Double-click the name to rename"><span class="lcl">${c===lastClip()?"Last clip":"Selected"}</span><b id="lcName">${esc(c.name)}</b><span class="lcm">${esc(camName(c.cam))}<i></i><span class="mono">${len(c.outT-c.inT)}</span></span><span class="lcsaved" id="lcSaved">Saved ✓</span><button class="lccue" id="lcCue" title="Park the output on this clip's first frame, ready to roll (Space plays it)">${I("cue")}<span>Cue</span></button></div><div class="lcr">
+    <div class="pv"><span class="dim">Tags</span>${tags.map(t=>`<span class="pchip ${c.tags.includes(t)?"on":""}" data-t="${esc(t)}">${esc(t)}</span>`).join("")}${lcAdding==="tag"?`<input class="padd" id="lcIn" list="lcTagList" placeholder="New or existing tag"><datalist id="lcTagList">${allTags().filter(t=>!tags.includes(t)).map(t=>`<option value="${esc(t)}">`).join("")}</datalist>`:`<span class="pchip add" data-add="tag">+ Tag</span>`}</div>
+    <div class="pv"><span class="dim">Playlist</span>${st.pls.map(p=>`<span class="pchip pl ${inP(p)?"on":""}" data-p="${p.id}">${inP(p)?"✓ ":""}${esc(p.name)}</span>`).join("")}${lcAdding==="pl"?`<input class="padd" id="lcIn" placeholder="New playlist name">`:`<span class="pchip add" data-add="pl">+ Playlist</span>`}</div></div>`;
+  box.classList.remove("flash"); if(flash){ void box.offsetWidth; box.classList.add("flash"); }
+  const inp=$("lcIn"); if(inp){ inp.focus(); const done=()=>{ lcAdding=null; drawLast(); };
+    inp.onkeydown=e=>{ e.stopPropagation(); if(e.key==="Escape") return done(); if(e.key!=="Enter") return; const v=inp.value.trim(); if(!v) return done();
+      if(lcAdding==="tag"){ if(!lcOrder.includes(v)) lcOrder.push(v); if(!c.tags.includes(v)){ c.tags.push(v); st.tagUse[v]=(st.tagUse[v]||0)+1; } }
+      else { const p=st.pls.find(x=>x.name.toLowerCase()===v.toLowerCase())||newPlaylist(v); if(!inP(p)) p.items.push({cid:c.id,tracks:[1,1,0,0]}); toast(`${c.name} → ${p.name}`); }
+      lcAdding=null; inp.blur(); renderSide(); savedFlash(); };
+    inp.onblur=()=>setTimeout(()=>{ if(lcAdding&&document.activeElement!==$("lcIn")) done(); },150); } }
+$("lastC").addEventListener("click",e=>{ const c=cardClip(); if(!c) return; if(e.target.closest("#lcCue")) return cueClip(c.id);
+  const t=e.target.closest("[data-t]"), p=e.target.closest("[data-p]"), a=e.target.closest("[data-add]");
+  if(a){ lcAdding=a.dataset.add; return drawLast(); }
+  if(t){ const v=t.dataset.t, i=c.tags.indexOf(v); if(i<0){ c.tags.push(v); st.tagUse[v]=(st.tagUse[v]||0)+1; } else c.tags.splice(i,1); renderSide(); return savedFlash(); }
+  if(p){ const pl=st.pls.find(x=>x.id===+p.dataset.p); if(pl.items.some(it=>it.cid===c.id)){ pl.items=pl.items.filter(it=>it.cid!==c.id); if(pl===st.pl) st.run=null; } else pl.items.push({cid:c.id,tracks:[1,1,0,0]}); renderSide(); return savedFlash(); } });
+$("lastC").addEventListener("dblclick",e=>{ const n=e.target.closest("#lcName"); const c=cardClip(); if(!n||!c) return;
+  const inp=document.createElement("input"); inp.value=c.name; n.replaceWith(inp); inp.focus(); inp.select(); let ok=false;
+  const end=save=>{ if(ok) return; ok=true; const v=inp.value.trim(); const ch=save&&v&&v!==c.name; if(ch) c.name=v; inp.onblur=null; inp.blur(); renderSide(); if(ch) savedFlash(); };
+  inp.onkeydown=ev=>{ ev.stopPropagation(); if(ev.key==="Enter") end(true); if(ev.key==="Escape") end(false); }; inp.onblur=()=>end(true); });
+function fillNextPl(){ const se=$("nPl"); if(!st.pls.some(p=>p.id===st.nextPl)) st.nextPl=0;
+  const h=`<option value="0">No playlist</option>`+st.pls.map(p=>`<option value="${p.id}">→ ${esc(p.name)}</option>`).join(""); if(se.innerHTML!==h) se.innerHTML=h; se.value=String(st.nextPl||0); se.classList.toggle("set",!!st.nextPl); }
+// While a rename / new tag / new playlist field is open, redraws wait until it closes (otherwise the field is rebuilt and loses focus).
+var sidePending=false;
+document.addEventListener("focusout",()=>setTimeout(()=>{ if(sidePending&&!editingNow()) renderSide(); },0));   // run a held redraw once the field is left
+function editingNow(){ const a=document.activeElement; return !!(a&&a.tagName==="INPUT"&&a.closest&&a.closest("#sideBody,#lastC")); }
+function renderSide(){ if(editingNow()){ sidePending=true; persistSoon(); return; } sidePending=false; persistSoon(); fillNextPl(); drawLast();
+  $("tClips").innerHTML=`${I("film")} Clips`; $("tPl").innerHTML=`${I("grid")} Playlist`;   /* no counts on the tabs (Simon, 2026-11-26) */
+  $("tClips").classList.toggle("on",st.side==="clips"); $("tPl").classList.toggle("on",st.side==="pl");
+  const b=$("sideBody"); b.innerHTML=""; st.side==="clips"?renderClips(b):renderPl(b); }
+function renderClips(b){
+  // tag filter (tags are there to sort the clips): All plus every tag in use, with a count; click one to show only those clips
+  const used=[...new Set([...st.clips.flatMap(c=>c.tags||[]),...Object.keys(st.tagUse)])].sort(   /* tags on clips, plus tags made with + (count 0 until used) */(x,y)=>(st.tagUse[y]||0)-(st.tagUse[x]||0)||x.localeCompare(y));
+  if(st.filter&&!used.includes(st.filter)) st.filter=null;
+  // Tag chips as tabs at the top of Clips (same compact chips as the playlists): All, then each tag in use with a count.
+  // As many as fit are shown; "+ More (n)" lists the rest. PARKED: the "Show" playlist menu (st.plFilter) is no longer drawn.
+  const plsOf=c=>st.pls.filter(p=>p.items.some(it=>it.cid===c.id)); st.plFilter="";
+  const inShow=()=>true;
+  { const t=document.createElement("div"); t.className="pltabs";
+    const cnt=tg=>st.clips.filter(c=>(c.tags||[]).includes(tg)).length;
+    t.innerHTML=`<button class="pt ${st.filter?"":"on"}" data-f=""><span>All</span><b>${st.clips.length}</b></button>`+used.map(tg=>`<button class="pt ${st.filter===tg?"on":""}" data-f="${esc(tg)}"><span>${esc(tg)}</span><b>${cnt(tg)}</b></button>`).join("")+`<button class="pt more" title="All tags"></button><button class="pt add" id="tgAdd" title="New tag">${I("plus")}</button>`;
+    t.onclick=e=>{ if(e.target.closest("#tgAdd")) return ask({title:"New tag",text:"It shows up here and on the Last clip card, ready to tap.",input:true,value:"",ok:"Add"},n=>{ if(!(n in st.tagUse)) st.tagUse[n]=0; if(lcOrder&&!lcOrder.includes(n)) lcOrder.push(n); renderTags(); renderSide(); toast(`Tag "${n}" added`); });
+      if(e.target.closest(".pt.more")) return modal(()=>`<h3>Tags</h3><p>Show only the clips with this tag.</p><div class="mtags">${used.map(tg=>`<span class="tag ${st.filter===tg?"on":""}" data-t="${esc(tg)}">${esc(tg)} ${cnt(tg)}</span>`).join("")}</div><div class="row" style="margin-top:14px"><button data-close>Close</button></div>`).open((box,redraw,close)=>box.querySelectorAll("[data-t]").forEach(x=>x.onclick=()=>{ st.filter=x.dataset.t; close(); }));
+      const x=e.target.closest("[data-f]"); if(!x) return; st.filter=x.dataset.f||null; renderSide(); };
+    b.appendChild(t); fitTabs(); requestAnimationFrame(fitTabs); }
+  const l=document.createElement("div"); l.className="list"; b.appendChild(l);
+  if(!st.clips.length){ l.innerHTML=`<div class="empty">No clips yet.</div>`; return; }
+  const shown=[...st.clips].filter(c=>inShow(c)&&(!st.filter||(c.tags||[]).includes(st.filter))).sort((x,y)=>y.inT-x.inT);
+  if(!shown.length) l.innerHTML=`<div class="empty">No clips match.</div>`;
+  const act=cardClip(); shown.forEach(c=>{ const r=document.createElement("div"); r.className="crow"+(act&&act.id===c.id?" sel":"");   /* the active clip (the one on the card) is always highlighted, also right after it is made */
+    r.innerHTML=`<img src="${thumb(c)}" alt=""><div style="min-width:0"><div class="n" data-cid="${c.id}" title="Double-click to rename">${esc(c.name)}</div><div class="c">${esc(camName(c.cam))}${c.tags.length?" · "+c.tags.map(esc).join(", "):""}${(n=>n.length?` <span class="inpl">${I("play")}${esc(n.map(p=>p.name).join(", "))}</span>`:"")(plsOf(c))}</div></div>
+      <span class="mono">${len(c.outT-c.inT)}</span><span><button class="more" data-a="play" title="Play">${I("play")}</button><button class="more" data-a="pl" title="Add to a playlist, set tags">${I("plus")}</button><button class="more" data-a="del" title="Delete"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/></svg></button></span>`;
+    r.onclick=e=>{ const a=e.target.closest("[data-a]"); if(!a) return loadClip(c.id,false);
+      if(a.dataset.a==="play") loadClip(c.id,true);
+      if(a.dataset.a==="pl") openAdd(c);
+      if(a.dataset.a==="del") ask({title:`Delete "${c.name}"?`,text:"It also leaves every playlist.",ok:"Delete",danger:true},()=>{ st.clips=st.clips.filter(x=>x.id!==c.id); st.pls.forEach(p=>p.items=p.items.filter(x=>x.cid!==c.id)); renderSide(); }); };
+    l.appendChild(r); }); }
+// Fit the playlist chips: hide chips from the end (never the open one) until the row fits; the hidden ones sit behind "+ More (n)".
+function fitTabs(){ const t=document.querySelector(".pltabs"); if(!t||!t.clientWidth) return; const more=t.querySelector(".pt.more"), chips=[...t.querySelectorAll("[data-p],[data-f]:not([data-f=''])")]; if(!more) return;
+  chips.forEach(c=>c.style.display=""); more.style.display="none"; let hid=0;
+  for(let i=chips.length-1;i>=0&&t.scrollHeight>t.clientHeight+1;i--){ if(chips[i].classList.contains("on")) continue; chips[i].style.display="none"; hid++; more.style.display=""; more.textContent=`+ More (${hid})`; } }
+new ResizeObserver(()=>fitTabs()).observe($("sideBody"));   /* re-fit whenever the card changes size (also while the page settles at load) */
+function renderPl(b){ const p=st.pl, cl=p.items.map(it=>clipById(it.cid));
+  { // playlist tabs: one click switches, + makes a new one, double-click a tab renames it
+    const t=document.createElement("div"); t.className="pltabs";
+    t.innerHTML=st.pls.map(x=>`<button class="pt ${x===p?"on":""}" data-p="${x.id}" title="${esc(x.name)} · ${x.items.length} clip${x.items.length===1?"":"s"} · ${len(plLen(x))}">${x===p&&st.run?I("play"):""}<span>${esc(x.name)}</span><b>${x.items.length}</b></button>`).join("")+`<button class="pt more" id="ptMore" title="All playlists"></button><button class="pt add" id="ptAdd" title="New playlist">${I("plus")}</button>`;
+    t.onclick=e=>{ const x=e.target.closest("[data-p]"); if(x) return switchPl(st.pls.find(q=>q.id===+x.dataset.p)); if(e.target.closest("#ptAdd")) $("newPl").click(); if(e.target.closest("#ptMore")) openFolder(); };
+    t.ondblclick=e=>{ const x=e.target.closest("[data-p]"); if(!x) return; const q=st.pls.find(v=>v.id===+x.dataset.p); ask({title:"Rename the playlist",input:true,value:q.name,ok:"Save"},n=>{ q.name=n; renderSide(); }); };
+    const bar=document.createElement("div"); bar.className="plbar"; bar.appendChild(t);   /* chips + Auto-play on one row (the "Playlist: name" title is gone; double-click a chip to rename) */
+    bar.insertAdjacentHTML("beforeend",`<label class="plauto"><span>Auto-play</span><button class="sw ${p.auto?"on":""}" id="auto2" title="Play the next clip automatically"></button></label>`);
+    bar.querySelector("#auto2").onclick=()=>{ p.auto=!p.auto; renderSide(); };
+    b.appendChild(bar); fitTabs(); requestAnimationFrame(fitTabs); }
+  const total=cl.reduce((a,c)=>a+(c?c.outT-c.inT:0),0), played=cl.reduce((a,c,i)=>a+(c&&st.run&&i<st.run.i?c.outT-c.inT:0),0)+(st.run&&cl[st.run.i]?Math.max(0,st.t-cl[st.run.i].inT):0);
+  b.insertAdjacentHTML("beforeend",`<div class="plhead"><span class="nm">Playlist: ${esc(p.name)}</span><button class="more" id="ren" title="Rename">${I("edit")}</button><span class="sp"></span><span>Auto-play</span><button class="sw ${p.auto?"on":""}" id="auto"></button></div>
+    <div class="thead"><span></span><span></span><span class="num">#</span><span style="grid-column:4/6">Clip</span><span>Length</span><span class="trk">Track 1</span><span class="trk">Track 2</span><span class="trk">Track 3</span><span class="trk">Track 4</span><span></span></div>`);
+  $("ren").onclick=()=>{ ask({title:"Rename the playlist",input:true,value:p.name,ok:"Save"},n=>{ p.name=n; renderSide(); }); };
+  $("auto").onclick=()=>{ p.auto=!p.auto; renderSide(); };
+  const l=document.createElement("div"); l.className="list"; b.appendChild(l);
+  if(!p.items.length) l.innerHTML=`<div class="empty">The playlist is empty. Add clips from Clips.</div>`;
+  p.items.forEach((it,i)=>{ const c=clipById(it.cid); if(!c) return; const now=st.run&&st.run.i===i;
+    const r=document.createElement("div"); r.className="prow"+(now?" now":"")+(!now&&cardClip()&&cardClip().id===c.id?" sel":""); r.draggable=true;
+    r.innerHTML=`<span class="grip">${I("grip")}</span><span style="color:var(--teal)">${now?I("play"):""}</span><span>${i+1}</span>
+      <span class="thumb"><img src="${thumb(it.cam?{...c,cam:it.cam}:c)}" alt=""></span>
+      <div style="min-width:0"><div class="n" data-cid="${c.id}" title="Double-click to rename">${esc(c.name)}</div><div class="c">${esc(camName(it.cam||c.cam))}</div></div><span class="mono">${len(c.outT-c.inT)}</span>
+      ${it.tracks.map((v,k)=>`<span class="ck ${v?"on":""}" data-k="${k}">${v?I("check"):""}</span>`).join("")}<button class="more" data-a="x" title="Take out of the playlist">${I("more")}</button>`;
+    r.onclick=e=>{ const k=e.target.closest("[data-k]"); if(k){ it.tracks[+k.dataset.k]^=1; return renderSide(); }
+      if(e.target.closest("[data-a]")) ask({title:`Take "${c.name}" out of the playlist?`,text:"The clip stays under Clips.",ok:"Take out"},()=>{ p.items.splice(i,1); if(st.run&&st.run.i===i) st.run=null; renderSide(); }); };
+    r.ondblclick=e=>{ if(!e.target.closest(".n,.nedit")) playIndex(i); };   /* double-click the name renames instead */
+    r.ondragstart=e=>e.dataTransfer.setData("text/plain",String(i));
+    r.ondragover=e=>{ e.preventDefault(); r.classList.add("drop"); }; r.ondragleave=()=>r.classList.remove("drop");
+    r.ondrop=e=>{ e.preventDefault(); r.classList.remove("drop"); const f=+e.dataTransfer.getData("text/plain"); moveItem(f,f<i?i-1:i); };
+    l.appendChild(r); });
+  /* Total / Played / Left under the list (Simon, 2026-11-26), above Next */
+  b.insertAdjacentHTML("beforeend",`<div class="times" id="times"><span>Total:<b>${len(total)}</b></span><span class="sep"></span><span>Played:<b>${len(played)}</b></span><span class="sep"></span><span>Left:<b>${len(total-played)}</b></span></div>`);
+  if(st.nextIdx!=null&&st.nextIdx>=p.items.length) st.nextIdx=p.items.length?0:null;
+  const nc=st.nextIdx!=null&&p.items[st.nextIdx]?clipById(p.items[st.nextIdx].cid):null;
+  b.insertAdjacentHTML("beforeend",`<div class="nextl"><div class="box">${I("play")} <span id="nextT">Next: ${nc?`${esc(nc.name)} (${len(nc.outT-nc.inT)})`:"–"}</span></div><button class="icon" id="nUp" title="Make the previous one next"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 15l6-6 6 6"/></svg></button><button class="icon" id="nDn" title="Make the following one next"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></button></div>
+    <div class="foot"><button id="clr"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/></svg> Clear</button><button id="saveAs"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3h11l3 3v15H5z"/><path d="M8 3v5h7V3"/><path d="M8 21v-7h8v7"/></svg> Save as…</button><span class="sp"></span><button id="cuePl" title="Park the output on the Next clip's first frame, ready to roll">${I("cue")}<span>Cue</span></button><button class="teal" id="playPl">${st.run&&!st.run.held&&st.play?I("stop")+" Stop":I("ff")+" Play playlist"}</button></div>`);
+  $("nUp").onclick=()=>{ if(!p.items.length) return; st.nextIdx=((st.nextIdx??0)-1+p.items.length)%p.items.length; renderSide(); };
+  $("nDn").onclick=()=>{ if(!p.items.length) return; st.nextIdx=((st.nextIdx??-1)+1)%p.items.length; renderSide(); };
+  $("clr").onclick=()=>{ if(p.items.length) ask({title:"Clear the playlist?",text:"The clips stay under Clips.",ok:"Clear",danger:true},()=>{ p.items=[]; st.run=null; renderSide(); }); };
+  $("saveAs").onclick=()=>{ ask({title:"Save the playlist as",text:"Saves a copy under a new name and opens it. The original stays in the folder.",input:true,value:p.name+" (copy)",ok:"Save"},n=>{ switchPl(newPlaylist(n,p.items.map(it=>({cid:it.cid,tracks:[...it.tracks]})))); toast(`Saved "${n}"`); }); };
+  $("cuePl").onclick=()=>{ const it=p.items[st.nextIdx??0]; if(!it) return toast("The playlist is empty"); const i=st.nextIdx??0; cueClip(it.cid); st.nextIdx=i; renderSide(); };
+  $("playPl").onclick=playPlaylist; }
+
+// ---------- quick tags ----------
+// One row: the five most used tags (the first five of TAGS until you have used some), any other picked tags,
+// and "+ More" which opens a list of every tag where you can also type a new one.
+const allTags=()=>{ const h=st.hiddenTags||[], onClip=new Set(st.clips.flatMap(c=>c.tags||[])); return [...new Set([...TAGS,...Object.keys(st.tagUse),...st.next.tags])].filter(t=>!h.includes(t)||onClip.has(t)); };   // deleted tags stay out unless a clip has them again
+function topTags(){ return allTags().map((t,i)=>({t,i,u:st.tagUse[t]||0})).sort((a,b)=>b.u-a.u||a.i-b.i).slice(0,5).map(x=>x.t); }
+function toggleTag(t){ const i=st.next.tags.indexOf(t); i<0?st.next.tags.push(t):st.next.tags.splice(i,1); renderTags(); }
+function renderTags(){ const top=topTags(), extra=st.next.tags.filter(t=>!top.includes(t)), more=allTags().length-top.length;
+  $("tags").innerHTML=[...top,...extra].map(t=>`<span class="tag ${st.next.tags.includes(t)?"on":""}" data-t="${esc(t)}">${esc(t)}</span>`).join("")+`<span class="tag fler" id="fler">+ More${more>0?` (${more})`:""}</span>`; }
+$("tags").onclick=e=>{ if(e.target.closest("#fler")) return openTagList(e.target.closest("#fler")); const x=e.target.closest("[data-t]"); if(x) toggleTag(x.dataset.t); };
+function openTagList(anchor){ const pop=$("tagPop"); let q="";
+  const draw=()=>{ const list=allTags().filter(t=>t.toLowerCase().includes(q.toLowerCase()));
+    pop.innerHTML=`<input id="tagQ" placeholder="Search or type a new tag" value="${esc(q)}"><div class="tlist">${list.map(t=>`<span class="tag ${st.next.tags.includes(t)?"on":""}" data-t="${esc(t)}">${esc(t)}</span>`).join("")||`<span class="dim">Enter adds "${esc(q)}"</span>`}</div>`;
+    const inp=$("tagQ"); inp.focus(); inp.setSelectionRange(q.length,q.length);
+    inp.oninput=()=>{ q=inp.value; draw(); };
+    inp.onkeydown=ev=>{ ev.stopPropagation(); if(ev.key==="Escape") close(); if(ev.key==="Enter"&&q.trim()){ const t=q.trim(); if(!st.next.tags.includes(t)) st.next.tags.push(t); q=""; renderTags(); draw(); } };
+    pop.querySelector(".tlist").onclick=ev=>{ const x=ev.target.closest("[data-t]"); if(!x) return; toggleTag(x.dataset.t); draw(); }; };
+  const close=()=>{ pop.classList.remove("show"); document.removeEventListener("mousedown",out,true); };
+  const out=ev=>{ if(!pop.contains(ev.target)&&ev.target.id!=="fler") close(); };
+  draw(); pop.classList.add("show"); $("tagQ").focus(); /* focus after showing: a hidden field can't take focus */ const r=anchor.getBoundingClientRect(); pop.style.left=Math.min(innerWidth-330,r.left)+"px"; pop.style.top=(r.bottom+6)+"px";
+  document.addEventListener("mousedown",out,true); }
+
+// ---------- angles ----------
+let tiles=[];
+function buildAngles(){ $("angles").innerHTML=""; tiles=CAMS2.map(c=>{ const d=document.createElement("div"); d.className="ang";
+  d.innerHTML=`<canvas></canvas><span class="nm">${esc(c.name)}</span><span class="spk"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H2v6h4l5 4V5z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M19 5a10 10 0 0 1 0 14"/></svg></span><div class="m"><i><b></b></i><i><b></b></i><i><b></b></i></div>`;
+  // Changing angle sticks: on a playlist entry while the playlist plays (that entry only, so the same clip can use another
+  // angle in another playlist), or on the open clip itself (from Clips, the card or the timeline). Live: just switches the picture.
+  d.onclick=()=>{ st.cam=c.l; const it=st.run&&st.pl.items[st.run.i], cl=loaded();
+    if(it){ if((it.cam||clipById(it.cid).cam)!==c.l){ it.cam=c.l; toast(`${clipById(it.cid).name} in ${st.pl.name}: ${c.name}`); renderSide(); } }
+    else if(cl){ if(cl.cam!==c.l){ cl.cam=c.l; toast(`${cl.name}: ${c.name}`); renderSide(); } } }; $("angles").appendChild(d); return {el:d,l:c.l,cv:d.querySelector("canvas"),m:[...d.querySelectorAll("b")]}; }); }
+
+// ---------- bar ----------
+// The timeline is a moving window that ends at live (marks slide left as time passes). 2 / 10 / 30 min or all of it.
+// Scrub back further than the window and it follows the playhead. A loaded clip zooms in to the clip.
+function barWin(){ const c=loaded(), lt=liveT(); if(c&&!st.run) return [Math.max(0,c.inT-3),Math.min(lt,Math.max(c.outT+3,clipEnd(c)+0.5))]; if(c) return [c.inT,Math.min(lt,Math.max(c.outT,clipEnd(c)))];   /* the window includes Seconds after, so the playhead stays on the bar */
+  const W=st.win; if(!W||W>=lt) return [0,lt]; let a=lt-W; if(st.t<a+W*0.05) a=Math.max(0,st.t-W*0.1); return [a,Math.min(lt,a+W)]; }
+let drag=false;
+function barT(x){ const r=$("bar").getBoundingClientRect(), [a,b]=barWin(); return a+(b-a)*Math.max(0,Math.min(1,(x-r.left)/r.width)); }
+$("bar").oncontextmenu=e=>{ const k=e.target.closest(".mk"); if(k){ e.preventDefault(); st.marks=st.marks.filter(m=>m.id!==+k.dataset.mk); } };
+$("bar").onpointerdown=e=>{ if(e.button===2) return; const cb=e.target.closest(".cb"); if(cb){ e.stopPropagation(); return loadClip(+cb.dataset.cid,false); } const k=e.target.closest(".mk"); if(k){ e.stopPropagation(); return gotoMark(st.marks.find(m=>m.id===+k.dataset.mk)); }
+  const hd=e.target.closest(".io[data-h]"); if(hd){ drag=hd.dataset.h; $("bar").setPointerCapture(e.pointerId); st.play=false; return; } drag=true; $("bar").setPointerCapture(e.pointerId); st.live=false; st.play=false; st.t=barT(e.clientX); };
+$("bar").onpointermove=e=>{ if(!drag) return; const t=barT(e.clientX), c=editing();
+  if(drag==="in"&&c){ c.inT=Math.min(t,c.outT-0.2); st.t=c.inT; return; } if(drag==="out"&&c){ c.outT=Math.max(t,c.inT+0.2); st.t=c.outT; return; } st.t=t; };
+$("bar").onpointerup=()=>{ if(drag==="in"||drag==="out"){ thumbs.clear(); renderSide(); } drag=false; };
+
+// ---------- wiring ----------
+document.querySelectorAll("[data-j]").forEach(b=>b.onclick=()=>jump(+b.dataset.j));
+$("winSel").value=String(st.win); $("winSel").onchange=e=>{ st.win=+e.target.value; };
+$("ctxX").onclick=closeClip;
+$("mkAdd").onclick=addMark; $("mkPrev").onclick=()=>stepMark(-1); $("mkNext").onclick=()=>stepMark(1);
+$("playBtn").onclick=togglePlay; $("liveBtn").onclick=goLive; $("markIn").onclick=markIn; $("markOut").onclick=markOut;
+// ---------- the fader: magnetic steps at 0, 25, 50, 100 ----------
+// Near a step the cap is pulled in and sticks until you pull clearly past it (CATCH / EXIT, in % of travel).
+// Let go and it lands on the nearest step (Shift: any speed), then the speed ramps there.
+const DETENTS=[0,25,50,100,200], CATCH=4, EXIT=7;
+// bottom 80% of the travel is 0 to 100 (slow motion keeps most of the room), the top 20% is a short fast zone up to 200
+const SPLIT=0.8, MAXS=200, s2p=v=>100*(v<=100?v/100*SPLIT:SPLIT+(v-100)/(MAXS-100)*(1-SPLIT)), p2s=p=>{ const f=p/100; return f<=SPLIT?f/SPLIT*100:100+(f-SPLIT)/(1-SPLIT)*(MAXS-100); };
+const lev={target:100,snapped:100,drag:false};
+(()=>{ const f=$("fader"), tk=$("ticks"); tk.innerHTML=`<div class="fast" title="Faster than real time"></div>`+DETENTS.filter(d=>d>0).map(d=>`<div class="tk" data-d="${d}"><span>${d}</span></div>`).join("");
+  const pos=e=>{ const r=f.getBoundingClientRect(); return Math.max(0,Math.min(100,(r.bottom-14*Z-e.clientY)/(r.height-28*Z)*100)); };
+  const pulse=()=>{ const c=$("cap"); c.classList.remove("pulse"); void c.offsetWidth; c.classList.add("pulse"); };
+  const apply=(p,free)=>{ let v=Math.round(p2s(p));
+    if(!free){ if(lev.snapped!=null&&Math.abs(p-s2p(lev.snapped))<EXIT) v=lev.snapped; else { const d=DETENTS.find(d=>Math.abs(p-s2p(d))<CATCH); lev.snapped=null; if(d!=null){ v=d; lev.snapped=d; pulse(); } } }
+    else lev.snapped=null; lev.target=v; };
+  f.onpointerdown=e=>{ lev.drag=true; f.setPointerCapture(e.pointerId); lev.snapped=DETENTS.includes(lev.target)?lev.target:null; apply(pos(e),e.shiftKey); };
+  f.onpointermove=e=>{ if(lev.drag) apply(pos(e),e.shiftKey); };
+  f.onpointerup=e=>{ if(!lev.drag) return; lev.drag=false;
+    if(!e.shiftKey){ const tp=s2p(lev.target), d=DETENTS.reduce((a,x)=>Math.abs(s2p(x)-tp)<Math.abs(s2p(a)-tp)?x:a); if(d!==lev.target) pulse(); lev.target=d; lev.snapped=d; }
+    rampTo(lev.target); };
+  f.onpointercancel=()=>{ lev.drag=false; lev.target=Math.abs(Math.round(st.speed)); };
+  const rt=()=>$("rampV").textContent=st.rampLen?st.rampLen+" s":"off"; rt();
+  $("rampBtn").onclick=()=>{ st.rampLen=RAMPS[(RAMPS.indexOf(st.rampLen)+1)%RAMPS.length]; rt(); toast(st.rampLen?`The speed eases over ${st.rampLen} s when you let go`:"No ramp: the speed jumps when you let go"); }; })();
+$("qlen").value=String(st.qlen); const ql=()=>document.querySelectorAll(".ql").forEach(e=>e.textContent=st.qlen+" s"); ql();
+$("qlen").onchange=e=>{ st.qlen=+e.target.value; ql(); };
+$("qReplay").onclick=quickReplay; $("qClip").onclick=quickClip;
+$("qClear").onclick=()=>{ st.next={name:"",tag:"",tags:[]}; $("nName").value=""; $("nTag").value=""; renderTags(); };
+$("nName").oninput=e=>st.next.name=e.target.value; $("nPl").onchange=e=>{ st.nextPl=+e.target.value; fillNextPl(); persistSoon(); }; $("nTag").oninput=e=>st.next.tag=e.target.value;
+$("tClips").onclick=()=>{ st.side="clips"; renderSide(); }; $("tPl").onclick=()=>{ st.side="pl"; renderSide(); };
+$("newPl").onclick=()=>{ ask({title:"New playlist",input:true,value:"New playlist",ok:"Create"},n=>{ switchPl(newPlaylist(n)); toast(`Created "${n}"`); }); };
+$("openPl").onclick=openFolder; $("morePl").onclick=()=>ask({title:"Start fresh?",text:"Deletes all clips, marks and the playlist in this browser and brings back the four demo clips. Can't be undone.",ok:"Start fresh",danger:true},()=>{
+  noSave=true; clearTimeout(saveSoon); try{ localStorage.removeItem(KEY); }catch(e){} location.reload(); });
+const flipAir=()=>{ st.air=!st.air; };
+$("tally").onclick=flipAir; $("tally2").onclick=flipAir;
+$("uEnd").value=st.endMode; $("uEnd").onchange=e=>st.endMode=e.target.value;
+const secA=()=>+(st.framesAfter/FPS).toFixed(1), setSecA=v=>{ st.framesAfter=Math.max(0,Math.min(250,Math.round((+v||0)*FPS))); };   // shown in seconds, kept in frames
+$("uFa").value=secA(); $("uFa").oninput=e=>{ setSecA(e.target.value); persistSoon(); };
+// ---------- settings (gear in the header) ----------
+// Defaults for the whole page; the same values can still be changed where they live (length menu, Output panel, timeline menu).
+$("gear").innerHTML=I("gear");
+let setTab=(saved&&saved.setTab)||"sReplay";
+function openSettings(){ const d=$("sets"), seg=(k,opts)=>`<span class="seg" data-k="${k}">${opts.map(([v,l])=>`<button data-v="${v}" class="${String(st[k])===String(v)?"on":""}">${l}</button>`).join("")}</span>`;
+  const K=(k,t)=>`<kbd>${k}</kbd><span>${t}</span>`;
+  d.innerHTML=`<div class="sbar"><button id="setX" title="Back to the replay view (Esc)">← Back</button><h3>Settings</h3><span class="sp"></span></div>
+    <div class="sbody"><nav><a data-s="sReplay">Replay</a><a data-s="sOut">Output</a><a data-s="sKeys">Keyboard</a><a data-s="sData">This browser</a></nav><div>
+    <section id="sReplay"><h4>Replay</h4>
+    <div class="row"><span>Quick replay / clip length<small>How far back Replay and Clip go</small></span>${seg("qlen",[[5,"5 s"],[10,"10 s"],[15,"15 s"],[30,"30 s"]])}</div>
+    <div class="row"><span>Speed ramp<small>How long the speed eases when you let go of the fader</small></span>${seg("rampLen",[[0,"Off"],[0.3,"0.3 s"],[0.6,"0.6 s"],[1,"1 s"]])}</div>
+    <div class="row"><span>Timeline shows<small>How much time the timeline under the video covers</small></span>${seg("win",[[120,"2 min"],[600,"10 min"],[1800,"30 min"],[0,"All"]])}</div></section>
+    <section id="sOut"><h4>Output</h4>
+    <div class="row"><span>At clip end<small>What the output does when a clip or the playlist ends</small></span>${seg("endMode",[["hold","Hold last frame"],["live","Back to live"],["loop","Loop"]])}</div>
+    <div class="row"><span>Seconds after Out<small>Keeps playing this long past Out so the director can cut away</small></span><input type="number" id="setFa" min="0" max="10" step="0.1" value="${secA()}"></div></section>
+    <section id="sKeys"><h4>Keyboard</h4><div class="keys">
+      ${K("Space","Play / pause")}${K("Shift+Space or N","Back to live")}${K("J K L","Play backwards / pause / play (tap J or L again for 2x, hold K and tap J or L to step a frame)")}${K("← →","Step one frame (Shift: 10 s)")}${K("I / O","Mark In / Mark Out (Out saves the clip)")}${K("M  [  ]","Drop a mark, previous mark, next mark")}${K("1 2 3 4","Switch camera angle (sticks on the open clip or the playing playlist entry)")}${K("Esc","Leave the open clip or playlist")}</div></section>
+    <section id="sData"><h4>This browser</h4>
+    <div class="row"><span>Start fresh<small>Deletes all clips, marks and the playlist in this browser and brings back the demo clips</small></span><button class="danger" id="setFresh">Start fresh</button></div></section>
+    </div></div>`;
+  /* tabs: the side list shows one section at a time; the last one you looked at opens next time */
+  const tab=id=>{ setTab=id; persistSoon(); d.querySelectorAll("nav a").forEach(x=>x.classList.toggle("on",x.dataset.s===id)); d.querySelectorAll("section").forEach(x=>x.hidden=x.id!==id); };
+  d.querySelectorAll("nav a").forEach(a=>a.onclick=()=>tab(a.dataset.s)); tab(setTab);
+  d.classList.add("show");
+  d.querySelectorAll(".seg").forEach(g=>g.onclick=e=>{ const b=e.target.closest("button"); if(!b) return; const k=g.dataset.k, v=k==="endMode"?b.dataset.v:+b.dataset.v; st[k]=v;
+    g.querySelectorAll("button").forEach(x=>x.classList.toggle("on",x===b)); syncSettings(); });
+  $("setFa").oninput=e=>{ setSecA(e.target.value); syncSettings(); };
+  $("setFresh").onclick=()=>{ closeSettings(); $("morePl").click(); };
+  $("setX").onclick=closeSettings; d.scrollTop=0;
+  addEventListener("keydown",setKey,true); }
+function closeSettings(){ $("sets").classList.remove("show"); persistSoon(); $("sets").innerHTML=""; removeEventListener("keydown",setKey,true); }
+function setKey(e){ if(e.target.closest&&e.target.closest("input")&&e.key!=="Escape") return; e.stopPropagation(); if(e.key==="Escape") closeSettings(); }
+// push settings out to the controls that show the same values, and save
+function syncSettings(){ $("qlen").value=String(st.qlen); document.querySelectorAll(".ql").forEach(e=>e.textContent=st.qlen+" s");
+  $("winSel").value=String(st.win); $("uEnd").value=st.endMode; $("uFa").value=secA(); $("rampV").textContent=st.rampLen?st.rampLen+" s":"off"; persistSoon(); }
+$("gear").onclick=openSettings; if(saved&&saved.setOpen) openSettings();   /* reload lands back on Settings, on the same tab */
+$("ljud").onclick=()=>{ st.muted=!st.muted; $("ljud").classList.toggle("on",!st.muted); };
+$("vol").oninput=e=>{ $("volV").textContent=e.target.value+" dB"; e.target.title="Headphones "+e.target.value+" dB"; }; $("vol").title="Headphones "+$("vol").value+" dB";
+$("fs").onclick=()=>{ const v=$("vid"); (document.fullscreenElement?document.exitFullscreen():v.requestFullscreen?.())?.catch?.(()=>{}); };
+// J K L: L plays forward (tap again 2x), J plays backwards (tap again 2x), K pauses.
+// Hold K and tap J or L to step a frame; keep holding for 25% slow motion. Shift+Space or N: back to live.
+const held={}; let slowT=null;
+function shuttle(sp){ st.ramp=null; lev.target=Math.abs(sp); st.run&&(st.run.held=false); st.live=false; st.speed=sp; st.play=sp!==0; }
+function jkl(k,down){ held[k]=down;
+  if(k==="k"){ if(down){ st.live=false; st.play=false; } else clearTimeout(slowT); return; }
+  const d=k==="l"?1:-1;
+  if(held.k){ if(down){ st.play=false; jump(d/FPS); clearTimeout(slowT); slowT=setTimeout(()=>{ if(held[k]&&held.k) shuttle(25*d); },300); } else { clearTimeout(slowT); st.play=false; } return; }
+  if(!down) return; if(d>0&&st.live) return toast("Already live");
+  const cur=st.play?st.speed:0, nx=Math.sign(cur)===d&&Math.abs(cur)>=100?200*d:100*d; shuttle(nx); toast(`${d>0?"▶":"◀"} ${Math.abs(nx)/100}x`); }
+addEventListener("keydown",e=>{ if(e.target.closest("input,select,textarea")||e.metaKey||e.ctrlKey||e.altKey) return; const k=e.key.toLowerCase();
+  if(e.repeat&&"jkl".includes(k)) return;
+  if(k===" "){ e.preventDefault(); e.shiftKey?goLive():togglePlay(); } else if(k==="n") goLive(); else if(k==="j"||k==="k"||k==="l") jkl(k,true);
+  else if(k>="1"&&k<="4"&&!e.shiftKey){ const t=tiles[+k-1]; if(t) t.el.click(); }   /* 1 to 4: camera angle, same as clicking the tile (sticks on a playlist entry or an open clip) */
+  else if(k==="i") markIn(); else if(k==="o") markOut(); else if(k==="m") addMark(); else if(k==="[") stepMark(-1); else if(k==="]") stepMark(1);
+  else if(k==="escape"){ if(loaded()){ closeClip(); toast("Left the clip"); } }   /* Esc: out of a clip or playlist, stays on the frame */
+  else if(k==="arrowleft") jump(e.shiftKey?-10:-1/FPS); else if(k==="arrowright") jump(e.shiftKey?10:1/FPS); });
+addEventListener("keyup",e=>{ const k=e.key.toLowerCase(); if(held[k]) jkl(k,false); });
+addEventListener("blur",()=>{ for(const k in held) held[k]=false; clearTimeout(slowT); });
+
+// ---------- frame ----------
+function fit(cv){ const r=cv.getBoundingClientRect(), d=Math.min(2,devicePixelRatio||1), w=Math.round(r.width*d), h=Math.round(r.height*d); if(w&&h&&(cv.width!==w||cv.height!==h)){ cv.width=w; cv.height=h; } return [cv.width,cv.height]; }
+const lvl=(t,s)=>0.35+0.3*Math.abs(Math.sin(t*1.7+s))+0.2*Math.abs(Math.sin(t*7.1+s*2));
+let last=performance.now(), fr=0, lastSide=0;
+function frame(now){ const dt=Math.min(0.1,(now-last)/1000); last=now; fr++; const lt=liveT();
+  stepRamp(now);
+  if(st.live) st.t=lt;
+  else if(st.play){ st.t+=dt*st.speed/100; if(st.speed<0&&st.t<=0){ st.t=0; st.play=false; } const c=loaded(); if(c&&st.t>=clipEnd(c)) onClipEnd(); if(!st.live&&st.t>=lt&&st.ramp&&st.ramp.to<100){ st.t=lt; } else if(!st.live&&st.t>=lt){ st.t=lt; st.live=true; st.ramp=null; st.play=false; st.clipId=null; st.run=null; setSpeed(100); renderSide(); } }
+  const pc=$("pc"), [w,h]=fit(pc); drawScene(pc.getContext("2d"),w,h,camObj(st.cam),st.t);
+  $("tc").textContent=tc(st.t); $("angTxt").textContent=`Angle: ${camName(st.cam)} – ${(st.speed/100).toFixed(st.speed%100?2:1)}x`;
+  { const lg=$("liveTag"), txt=st.live?"LIVE":`${st.play?(loaded()?"Clip":"Replay")+" "+(st.speed<0?"◀ ":"")+Math.abs(Math.round(st.speed))+"%":st.cue?"Cued":"Paused"} · −${len(lt-st.t)}`; if(lg.textContent!==txt) lg.textContent=txt; lg.classList.toggle("behind",!st.live); lg.title=st.live?"":"How far behind live"; $("bar").classList.toggle("off",!st.live); $("state").classList.toggle("off",!st.live); }
+  { const c=loaded(), txt=!c?"":st.run?`Playlist ${st.run.i+1}/${st.pl.items.length} · ${c.name}`:`Editing · ${c.name} · ${((c.outT-c.inT)).toFixed(1)} s`;
+    if($("ctxT").textContent!==txt) $("ctxT").textContent=txt; $("ctx").style.display=txt?"":"none"; $("ctxX").style.display=st.run?"none":""; }
+  $("state").textContent=st.live?"Live":st.play?(loaded()?"Playing clip":"Replay"):"Paused";
+  { const pl=st.play||st.live; if($("playBtn").dataset.s!==String(pl)){ $("playBtn").dataset.s=String(pl); $("playBtn").innerHTML=I(pl?"pause":"play"); } } { const ef=st.live||st.play?st.speed:0, rs=Math.round(st.speed), sv=$("spdV"); /* ef: the real speed; 0 while paused (the cap keeps the speed Play resumes at) */ sv.textContent=lev.drag?lev.target+"%":ef===0?"0%":(rs<0?"◀ ":"")+Math.abs(rs)+"%";   /* one number: where the fader is going while you drag, the speed otherwise */ sv.classList.toggle("drag",lev.drag); sv.classList.toggle("fastv",(lev.drag?lev.target:Math.abs(ef))>100); }
+  { const f=$("fader"), h=f.clientHeight-28; $("cap").style.top=(14+h*(1-s2p(lev.target)/100))+"px"; const ef=st.live?100:st.play?st.speed:0; $("fil").style.height=s2p(Math.min(MAXS,Math.abs(ef)))+"%"; $("fil").classList.toggle("over",Math.abs(ef)>100);
+    { const fz=document.querySelector("#ticks .fast"); fz.style.top="14px"; fz.style.height=(h*(1-SPLIT))+"px"; }
+    document.querySelectorAll("#ticks .tk").forEach(t=>{ const d=+t.dataset.d; t.style.top=(14+h*(1-s2p(d)/100))+"px"; t.classList.toggle("on",d===lev.target); }); }
+  const [a,b]=barWin(), pct=t=>Math.min(100,Math.max(0,(t-a)/(b-a)*100)).toFixed(3)+"%";   /* never draw outside the bar */ $("barL").textContent=hms(a); $("barR").textContent=hms(b);
+  $("fill").style.width=pct(st.t); $("head").style.left=pct(st.t);
+  { // saved clips as small bars just above the timeline (click one to open it in edit mode)
+    let h=""; if(!loaded()) st.clips.forEach(c=>{ if(c.outT<a||c.inT>b) return; const l=Math.max(c.inT,a), r=Math.min(c.outT,b);
+      h+=`<div class="cb" data-cid="${c.id}" style="left:${pct(l)};width:calc(${pct(r)} - ${pct(l)})" title="${esc(c.name)} · ${hms(c.inT)} · ${len(c.outT-c.inT)}"></div>`; });
+    if($("cbars").innerHTML!==h) $("cbars").innerHTML=h; }
+  { let h=""; marksSorted().forEach((m,i)=>{ if(m.t>=a&&m.t<=b) h+=`<div class="mk" data-mk="${m.id}" style="left:${pct(m.t)}" title="Mark ${i+1} · ${hms(m.t)}"><b>${i+1}</b><i></i></div>`; }); if($("mks").innerHTML!==h) $("mks").innerHTML=h; }
+  { // In / Out on the timeline: the marks you are setting, or the loaded clip's In and Out
+    const c0=loaded(), I=st.inT!=null?st.inT:c0?c0.inT:null, O=st.inT!=null?st.outT:c0?c0.outT:null; let h="";
+    const ed=!!editing()&&st.inT==null, dh=k=>ed?` data-h="${k}"`:"";
+    if(I!=null) h+=`<div class="rng" style="left:${pct(I)};width:calc(${pct(O??st.t)} - ${pct(I)})"></div><div class="io in${ed?" drag":""}"${dh("in")} style="left:${pct(I)}" title="In ${tc(I)}${ed?" · drag to trim":""}">IN</div>`;
+    if(O!=null) h+=`<div class="io out${ed?" drag":""}"${dh("out")} style="left:${pct(O)}" title="Out ${tc(O)}${ed?" · drag to trim":""}">OUT</div>`;
+    if($("rng").innerHTML!==h) $("rng").innerHTML=h; }
+  $("markIn").classList.toggle("set",st.inT!=null);
+  $("liveBtn").disabled=st.live; // nothing to go back to when already live
+  const air=st.air; $("vid").classList.toggle("air",air); [$("tally"),$("tally2")].forEach(e=>{ e.classList.toggle("on",air); e.lastElementChild.textContent=air?"ON AIR":"NOT ON AIR"; });
+  const slow=st.live?1:st.play?0.6:0; /* Sound only mutes your monitoring; the meters still show the signal */ $("mL").style.height=lvl(st.t,0)*100*slow+"%"; $("mR").style.height=lvl(st.t,1)*100*slow+"%";
+  const c=loaded(), nc=st.nextIdx!=null&&st.pl.items[st.nextIdx]?clipById(st.pl.items[st.nextIdx].cid):null;
+  if(st.cue&&(!c||st.play||Math.abs(st.t-c.inT)>0.05)) st.cue=false;
+  { const cueTxt=st.cue&&c?c.name:st.run&&nc?nc.name:"–", playTxt=c&&!st.cue?c.name:"–";
+    if($("uP").textContent!==playTxt) $("uP").textContent=playTxt; if($("uQ").textContent!==cueTxt) $("uQ").textContent=cueTxt; $("uQ").classList.toggle("cued",!!st.cue);
+    { const pb=$("cuePl"); if(pb){ const it=st.pl.items[st.nextIdx??0], on=!!(st.cue&&it&&st.clipId===it.cid); pb.classList.toggle("on",on); const sp=pb.querySelector("span"); if(sp&&sp.textContent!==(on?"Cued":"Cue")) sp.textContent=on?"Cued":"Cue"; } }
+    const cb=$("lcCue"), lc=cardClip(); if(cb){ const on=!!(st.cue&&lc&&st.clipId===lc.id); cb.classList.toggle("on",on); const sp=cb.querySelector("span"); if(sp&&sp.textContent!==(on?"Cued":"Cue")) sp.textContent=on?"Cued":"Cue"; } }
+  if(fr%2===0) tiles.forEach(o=>{ o.el.classList.toggle("on",o.l===st.cam); const [tw,th]=fit(o.cv); drawScene(o.cv.getContext("2d"),tw,th,camObj(o.l),st.t,{thumb:true}); o.m.forEach((m,i)=>m.style.height=lvl(st.t,i+o.l.charCodeAt(0))*100*slow+"%"); }); /* angles follow the playhead: every angle shows the same moment as the output */
+  { // Next line counts down while the playlist plays: time left on the current clip at the current speed
+    const nt=$("nextT"); if(nt&&st.side==="pl"){ const pl=st.pl, nxt=st.nextIdx!=null&&pl.items[st.nextIdx]?clipById(pl.items[st.nextIdx].cid):null, cur=st.run&&pl.items[st.run.i]?clipById(pl.items[st.run.i].cid):null;
+      const rem=cur?Math.max(0,(clipEnd(cur)-st.t)/Math.max(0.01,Math.abs(st.speed)/100)):0, fmt=r=>r<60?r.toFixed(1)+" s":len(r), then={hold:"then holds",live:"then back to live",loop:"then loops"}[st.endMode]||"";
+      let txt="Next: –";
+      if(st.run&&st.play&&cur){ txt= nxt&&pl.auto ? `Next: ${nxt.name} · in ${fmt(rem)}`            // counting down to the next clip
+                                 : !nxt ? `End of playlist · in ${fmt(rem)} · ${then}`           // last clip: counting down to the end
+                                 : `Clip ends · in ${fmt(rem)} (auto-play off)`; }
+      else if(nxt) txt=`Next: ${nxt.name} (${len(nxt.outT-nxt.inT)})`;
+      if(nt.textContent!==txt) nt.textContent=txt; nt.parentElement.classList.toggle("counting",txt.includes(" · in ")); } }
+  if(st.side==="pl"&&st.run&&now-lastSide>500){ lastSide=now; const tm=$("times"); if(tm){ const cl=st.pl.items.map(it=>clipById(it.cid)), total=cl.reduce((x,y)=>x+(y?y.outT-y.inT:0),0);
+    const played=cl.reduce((x,y,i)=>x+(y&&i<st.run.i?y.outT-y.inT:0),0)+(cl[st.run.i]?Math.max(0,st.t-cl[st.run.i].inT):0);
+    tm.innerHTML=`<span>Total:<b>${len(total)}</b></span><span class="sep"></span><span>Played:<b>${len(played)}</b></span><span class="sep"></span><span>Left:<b>${len(total-played)}</b></span>`; } }
+  requestAnimationFrame(frame); }
+// ---------- fit the window height exactly ----------
+// Grow or shrink the video (16:9) until the left column's last panel ends at the bottom of the window.
+// The whole page is designed at about 1440 × 880 (his screenshot). On a smaller window it scales down as one piece
+// (CSS zoom) instead of spilling off the screen; on a bigger one it stays at 1 and the video grows instead.
+let Z=1;
+function scaleApp(z){ const app=$("app"); Z=z??(innerWidth<=700?1:Math.min(1,innerWidth/1440,innerHeight/880)); app.style.zoom=Z; app.style.height=(innerHeight/Z)+"px"; }
+const R=el=>{ const r=el.getBoundingClientRect(); return {top:r.top/Z,bottom:r.bottom/Z,width:r.width/Z,height:r.height/Z}; };
+// Centre the picture on the whole Live / program panel (in line with the timeline and buttons below), but keep at least
+// 10 px from the meter box; when there is not enough room it just sits 10 px right of the meters.
+function centerVid(){ const v=$("vid"), vw=$("viewer"), ml=document.querySelector(".vleft"); if(!v||!vw||!ml) return;
+  const W=vw.clientWidth, w=v.offsetWidth, m=ml.offsetWidth; v.style.marginLeft="0"; v.style.marginRight="0"; ml.style.marginLeft=Math.max(0,(W-w-m)/2)+"px"; }   /* meters + picture joined, and the pair is centred in the panel */
+new ResizeObserver(()=>centerVid()).observe($("viewer"));
+function fitPlayer(tries=0){ if(!tries) scaleApp(); const v=$("vid"), m=document.querySelector("main"), ang=document.querySelector(".a-ang");
+  if(innerWidth<=700){ v.style.width=""; return; }
+  const maxW=$("viewer").clientWidth-96,   /* at least 10 px space each side of the picture */ padB=parseFloat(getComputedStyle(m).paddingBottom)||0;
+  for(let i=0;i<4;i++){ const ut=document.querySelector(".a-ut"), utEnd=ut&&ut.lastElementChild?R(ut.lastElementChild).bottom:0, end=Math.min(R(m).bottom-padB,R(ang).bottom)-16;
+    const slack=Math.min(end-R($("angles")).bottom, end-utEnd);   // the bottom row must fit both the Angles tiles and the Output panel next to them
+    const h=R(v).height, w=Math.max(Math.min(460,maxW),Math.min(maxW,(h+slack)*16/9));   // never smaller than 460 wide: shrink the page instead
+    if(Math.abs(w-R(v).width)<1) break; v.style.width=w+"px"; }
+  centerVid();
+  // still taller than the window at the smallest video: scale the page down a bit more and fit again
+  const over=document.documentElement.scrollHeight-innerHeight; if(over>1&&tries<6){ scaleApp(Z*innerHeight/(innerHeight+over)); fitPlayer(tries+1); } }
+new ResizeObserver(()=>requestAnimationFrame(()=>fitPlayer())).observe(document.querySelector("main"));
+new ResizeObserver(()=>requestAnimationFrame(()=>fitPlayer())).observe($("lastC"));   /* the Last clip card can grow a row (many tags / playlists): refit the video */
+addEventListener("resize",()=>requestAnimationFrame(()=>fitPlayer()));
+buildAngles(); renderTags(); renderSide(); requestAnimationFrame(()=>fitPlayer()); setTimeout(()=>fitPlayer(),300); setTimeout(()=>fitPlayer(),1000); requestAnimationFrame(frame);   /* fit again once fonts and layout have settled */
+
+// ---------- in-page dialog: ask({title,text,ok,danger,input,value}, onOk) ----------
+// The box opens in the middle of the panel you clicked in (Clips / Playlist, Quick replay, ...), so the mouse
+// doesn't have to travel across the screen. Opened from the keyboard (no recent click) it stays centred on the page.
+let lastClick=null; addEventListener("pointerdown",e=>lastClick={el:e.target,t:performance.now()},true);
+function placeAtClick(box){ const c=lastClick; box.style.position=""; box.style.left=box.style.top=box.style.width="";
+  const pn=c&&performance.now()-c.t<800&&c.el.closest&&c.el.closest(".panel"); if(!pn) return;
+  const p=pn.getBoundingClientRect(); box.style.width=Math.min(420,p.width-24)+"px"; /* fits inside the card */ const b=box.getBoundingClientRect(), m=8;
+  const x=Math.max(m,Math.min(innerWidth-b.width-m, p.left+(p.width-b.width)/2)), y=Math.max(m,Math.min(innerHeight-b.height-m, p.top+(p.height-b.height)/2));
+  box.style.position="fixed"; box.style.left=x+"px"; box.style.top=y+"px"; }
+// ---------- small modals: + on a clip (playlists and tags) and the playlist folder ----------
+// Opens in the middle of the panel you clicked in, like ask(). Esc, Done or a click outside closes it.
+function modal(draw){ const d=$("dlg"); d.innerHTML=`<div class="box mbox"></div>`; const box=d.querySelector(".box"); d.classList.add("show");
+  const close=()=>{ d.classList.remove("show"); d.innerHTML=""; removeEventListener("keydown",key,true); renderSide(); };
+  const key=e=>{ if(e.key==="Escape"){ e.stopPropagation(); return close(); } if(e.target.closest&&e.target.closest("input")) return; e.stopPropagation(); };
+  addEventListener("keydown",key,true); d.onclick=e=>{ if(e.target===d) close(); };
+  const redraw=()=>{ box.innerHTML=draw(); box.querySelectorAll("[data-close]").forEach(b=>b.onclick=close); wire(box,redraw,close); }; let wire=()=>{};
+  return { open(w){ wire=w; redraw(); placeAtClick(box); } }; }
+function plLen(p){ return p.items.reduce((x,it)=>{ const c=clipById(it.cid); return x+(c?c.outT-c.inT:0); },0); }   /* a function, not a const: renderSide uses it before this line runs */
+// + on a clip: same chips as the Last clip card. One tap puts a playlist / tag on or off; "+ Playlist" / "+ Tag" open a small field
+// (Enter makes it and puts the clip in it). Done, Esc or a click outside closes.
+function openAdd(c){ let adding=null;
+  modal(()=>{ const inP=p=>p.items.some(it=>it.cid===c.id), tags=allTags().concat(c.tags.filter(t=>!allTags().includes(t)));
+    return `<div class="addh"><b>${esc(c.name)}</b><button class="bare x" data-close title="Close (Esc)">×</button></div>
+    <div class="pv"><span class="dim">Playlist</span>${st.pls.map(p=>`<span class="pchip pl ${inP(p)?"on":""}" data-p="${p.id}">${inP(p)?"✓ ":""}${esc(p.name)}</span>`).join("")}${adding==="pl"?`<input class="padd" id="mIn" placeholder="New playlist name">`:`<span class="pchip add" data-add="pl">+ Playlist</span>`}</div>
+    <div class="pv"><span class="dim">Tags</span>${tags.map(t=>`<span class="pchip ${c.tags.includes(t)?"on":""}" data-t="${esc(t)}">${esc(t)}</span>`).join("")}${adding==="tag"?`<input class="padd" id="mIn" placeholder="New tag">`:`<span class="pchip add" data-add="tag">+ Tag</span>`}</div>`; }).open((box,redraw)=>{
+    box.querySelectorAll("[data-p]").forEach(r=>r.onclick=()=>{ const p=st.pls.find(x=>x.id===+r.dataset.p);
+      if(p.items.some(it=>it.cid===c.id)){ p.items=p.items.filter(it=>it.cid!==c.id); if(p===st.pl){ st.run=null; if(st.nextIdx!=null&&st.nextIdx>=p.items.length) st.nextIdx=p.items.length?0:null; } }
+      else { p.items.push({cid:c.id,tracks:[1,1,0,0]}); if(p===st.pl&&st.nextIdx==null) st.nextIdx=0; } persistSoon(); redraw(); });
+    box.querySelectorAll("[data-t]").forEach(x=>x.onclick=()=>{ const t=x.dataset.t, i=c.tags.indexOf(t); if(i<0){ c.tags.push(t); st.tagUse[t]=(st.tagUse[t]||0)+1; } else { c.tags.splice(i,1); if(st.tagUse[t]) st.tagUse[t]--; } persistSoon(); redraw(); });
+    box.querySelectorAll("[data-add]").forEach(x=>x.onclick=()=>{ adding=x.dataset.add; redraw(); });
+    const inp=box.querySelector("#mIn"); if(inp){ inp.focus(); inp.onkeydown=e=>{ if(e.key==="Escape"){ e.stopPropagation(); adding=null; return redraw(); } if(e.key!=="Enter") return; const v=inp.value.trim(); if(!v){ adding=null; return redraw(); }
+      if(adding==="pl"){ const p=st.pls.find(x=>x.name.toLowerCase()===v.toLowerCase())||newPlaylist(v); if(!p.items.some(it=>it.cid===c.id)) p.items.push({cid:c.id,tracks:[1,1,0,0]}); }
+      else { if(!c.tags.includes(v)){ c.tags.push(v); st.tagUse[v]=(st.tagUse[v]||0)+1; } if(lcOrder&&!lcOrder.includes(v)) lcOrder.push(v); }
+      adding=null; persistSoon(); redraw(); }; } }); }
+function openFolder(){
+  modal(()=>`<h3>Playlists</h3><p>Click one to open it under the Playlist tab.</p>
+    <div class="mlist">${st.pls.map(p=>`<div class="mrow ${p===st.pl?"cur":""}" data-p="${p.id}"><span class="mn">${esc(p.name)}</span><span class="dim">${p.items.length} clip${p.items.length===1?"":"s"} · ${len(plLen(p))}</span>${st.pls.length>1?`<button class="bare mdel" data-del="${p.id}" title="Delete this playlist">${I("bin")}</button>`:""}</div>`).join("")}</div>
+    <div class="row"><button data-close>Close</button></div>`).open((box,redraw,close)=>{
+    box.querySelectorAll("[data-p]").forEach(r=>r.onclick=e=>{ const p=st.pls.find(x=>x.id===+r.dataset.p); const del=e.target.closest("[data-del]");
+      if(del){ if(r.classList.contains("sure")){ st.pls=st.pls.filter(x=>x!==p); if(st.pl===p) switchPl(st.pls[0]); persistSoon(); return redraw(); }
+        r.classList.add("sure"); del.textContent="Delete?"; return; }   /* second click on "Delete?" deletes */
+      close(); switchPl(p); toast(`Opened "${p.name}"`); }); }); }
+// ---------- right-click menu on tag and playlist chips: Rename / Delete ----------
+// Works on every tag chip (Clips filter row, Last clip card, + box, quick tags) and every playlist chip (playlist tabs, card, + box, folder).
+function cmenu(x,y,items){ let m=$("cmenu"); if(!m){ m=document.createElement("div"); m.id="cmenu"; document.body.appendChild(m); }
+  m.innerHTML=items.map((it,i)=>it==="-"?`<hr>`:`<button data-i="${i}" class="${it.danger?"danger":""}">${esc(it.label)}</button>`).join(""); m.classList.add("show");
+  const b=m.getBoundingClientRect(); m.style.left=Math.min(innerWidth-b.width-8,x)+"px"; m.style.top=Math.min(innerHeight-b.height-8,y)+"px";
+  const close=()=>{ m.classList.remove("show"); removeEventListener("pointerdown",out,true); removeEventListener("keydown",key,true); };
+  const out=e=>{ if(!m.contains(e.target)) close(); }, key=e=>{ if(e.key==="Escape"){ e.stopPropagation(); close(); } };
+  setTimeout(()=>{ addEventListener("pointerdown",out,true); addEventListener("keydown",key,true); },0);
+  m.onclick=e=>{ const bt=e.target.closest("[data-i]"); if(!bt) return; close(); items[+bt.dataset.i].run(); }; }
+function renameTag(o,n){ if(!n||n===o) return; st.clips.forEach(c=>{ const i=c.tags.indexOf(o); if(i>=0){ if(c.tags.includes(n)) c.tags.splice(i,1); else c.tags[i]=n; } });
+  if(st.tagUse[o]!=null){ st.tagUse[n]=(st.tagUse[n]||0)+st.tagUse[o]; delete st.tagUse[o]; } st.hiddenTags=[...new Set([...(st.hiddenTags||[]),o])].filter(t=>t!==n);
+  if(lcOrder){ const i=lcOrder.indexOf(o); if(i>=0) lcOrder[i]=n; } if(st.filter===o) st.filter=n; st.next.tags=st.next.tags.map(t=>t===o?n:t); renderTags(); renderSide(); toast(`Tag renamed to ${n}`); }
+function deleteTag(t){ const n=st.clips.filter(c=>c.tags.includes(t)).length;
+  ask({title:`Delete the tag "${t}"?`,text:n?`It comes off ${n} clip${n===1?"":"s"}. The clips stay.`:"No clip has it.",ok:"Delete",danger:true},()=>{
+    st.clips.forEach(c=>c.tags=c.tags.filter(x=>x!==t)); delete st.tagUse[t]; st.hiddenTags=[...new Set([...(st.hiddenTags||[]),t])];
+    if(lcOrder) lcOrder=lcOrder.filter(x=>x!==t); if(st.filter===t) st.filter=null; st.next.tags=st.next.tags.filter(x=>x!==t); renderTags(); renderSide(); toast(`Tag "${t}" deleted`); }); }
+function deletePl(p){ if(st.pls.length<2) return toast("The last playlist can't be deleted");
+  ask({title:`Delete the playlist "${p.name}"?`,text:`${p.items.length} clip${p.items.length===1?"":"s"} in it. The clips stay under Clips.`,ok:"Delete",danger:true},()=>{
+    if(st.pl===p&&st.run&&st.play&&!st.run.held) return toast(`"${p.name}" is playing. Pause it first.`);
+    st.pls=st.pls.filter(x=>x!==p); if(st.pl===p){ st.pl=st.pls[0]; st.run=null; st.nextIdx=st.pl.items.length?0:null; } if(st.nextPl===p.id) st.nextPl=0; renderSide(); toast(`Playlist "${p.name}" deleted`); }); }
+addEventListener("contextmenu",e=>{ if(e.target.closest("#bar")) return;
+  const tg=e.target.closest("[data-t],[data-f]:not([data-f=''])"), pc=e.target.closest("[data-p]");
+  if(tg){ const t=tg.dataset.t??tg.dataset.f; e.preventDefault();
+    cmenu(e.clientX,e.clientY,[{label:`Rename tag "${t}"`,run:()=>ask({title:"Rename the tag",input:true,value:t,ok:"Save"},n=>renameTag(t,n))},"-",{label:"Delete tag",danger:true,run:()=>deleteTag(t)}]); return; }
+  if(pc){ const p=st.pls.find(x=>x.id===+pc.dataset.p); if(!p) return; e.preventDefault();
+    cmenu(e.clientX,e.clientY,[{label:`Rename "${p.name}"`,run:()=>ask({title:"Rename the playlist",input:true,value:p.name,ok:"Save"},n=>{ p.name=n; renderSide(); })},"-",{label:"Delete playlist",danger:true,run:()=>deletePl(p)}]); } });
+function ask(o,onOk){ const d=$("dlg"); d.innerHTML=`<div class="box"><h3>${esc(o.title)}</h3>${o.text?`<p>${esc(o.text)}</p>`:""}${o.input?`<input id="dlgIn" value="${esc(o.value||"")}">`:""}<div class="row"><button id="dlgNo">Cancel</button><button class="ok${o.danger?" danger":""}" id="dlgOk">${esc(o.ok||"OK")}</button></div></div>`;
+  d.classList.add("show"); placeAtClick(d.querySelector(".box")); const inp=$("dlgIn"); const close=()=>{ d.classList.remove("show"); d.innerHTML=""; removeEventListener("keydown",key,true); };
+  const go=()=>{ const v=inp?inp.value.trim():true; if(inp&&!v) return inp.focus(); close(); onOk(v); };
+  const key=e=>{ if(e.key==="Escape"){ e.stopPropagation(); close(); } else if(e.key==="Enter"){ e.preventDefault(); e.stopPropagation(); go(); } else e.stopPropagation(); };
+  addEventListener("keydown",key,true); $("dlgNo").onclick=close; $("dlgOk").onclick=go; d.onclick=e=>{ if(e.target===d) close(); };
+  setTimeout(()=>{ if(inp){ inp.focus(); inp.select(); } else $("dlgOk").focus(); },0); }
+</script>
+</body>
+</html>
